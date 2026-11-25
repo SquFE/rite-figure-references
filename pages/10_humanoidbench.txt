@@ -1,0 +1,56 @@
+HumanoidBench: Simulated Humanoid Benchmark
+for Whole-Body Locomotion and Manipulation
+Carmelo Sferrazza1 Dun-Ming Huang1 Xingyu Lin1 Youngwoon Lee1,2 Pieter Abbeel1
+1UC Berkeley 2Yonsei University
+Fig. 1: Humanoid robots equipped with dexterous hands hold immense promise for integration into real-world human
+environments. Nonetheless, harnessing the full potential of humanoid robots presents numerous challenges, such as the intricate
+control of robots with complex dynamics, sophisticated coordination among various body parts, and addressing long-horizon
+complex tasks envisioned for these robots. We present HumanoidBench, a simulated humanoid robot benchmark consisting of
+15 whole-body manipulation and 12 locomotion tasks, such as shelf rearrangement, package unloading, and maze navigation.
+Abstract—Humanoid robots hold great promise in assisting still challenging and has been delayed mainly due to such
+humans in diverse environments and tasks, due to their flexibility robots’ costly and unsafe real-world experimental setups.
+and adaptability leveraging human-like morphology. However,
+research in humanoid robots is often bottlenecked by the To accelerate the progress of research for humanoid robots,
+costly and fragile hardware setups. To accelerate algorithmic
+we present the first-of-its-kind humanoid robot benchmark,
+research in humanoid robots, we present a high-dimensional,
+HumanoidBench, with a diverse set of locomotion and
+simulated robot learning benchmark, HumanoidBench, featuring
+a humanoid robot equipped with dexterous hands and a variety manipulation tasks, providing an accessible, fast, safe, and
+of challenging whole-body manipulation and locomotion tasks. inexpensivetestbedtorobotlearningresearchers.Oursimulated
+Our findings reveal that state-of-the-art reinforcement learning humanoid benchmark demonstrates a variety of challenges
+algorithms struggle with most tasks, whereas a hierarchical
+in learning for autonomous humanoid robots, such as the
+learningapproachachievessuperiorperformancewhensupported
+intricatecontrolofrobotswithcomplexdynamics,sophisticated
+by robust low-level policies, such as walking or reaching. With
+HumanoidBench, we provide the robotics community with a coordination among various body parts, and long-horizon
+platform to identify the challenges arising when solving diverse complex tasks.
+tasks with humanoid robots, facilitating prompt verification
+of algorithms and ideas. The open-source code is available at HumanoidBench provides (1) a simulation environment
+https://humanoid-bench.github.io. comprisingahumanoidrobotwithtwodexteroushands,asillus-
+trated in Figure 1; (2) a variety of tasks, spanning locomotion,
+I. INTRODUCTION manipulation, and whole-body control, incorporating humans’
+everyday tasks; (3) a standardized benchmark to evaluate the
+Humanoid robots have long held promise to be seamlessly
+progress of the community on high-dimensional humanoid
+deployed in our daily lives. Despite the rapid progress in
+robot learning and control. In fact, HumanoidBench supports
+humanoidrobots’hardware(e.g.,BostonDynamicsAtlas,Tesla
+genericcontrollerstructures,includingbothlearningandmodel-
+Optimus, Unitree H1), their controllers are fully or partially
+based approaches [14, 26]. In this paper, we present extensive
+hand-designed for specific tasks, which requires significant en-
+benchmarking results of the state-of-the-art reinforcement
+gineering efforts for each new task and environment, and often
+learning (RL) algorithms, which do not require extensive
+demonstrates only limited whole-body control capabilities.
+domain knowledge, and a hierarchical RL approach.
+In recent years, robot learning has shown steady progress in
+bothroboticmanipulation[12,69,15]andlocomotion[27,71]. The simulation environment of HumanoidBench uses the
+However, scaling learning algorithms to humanoid robots is MuJoCo[60]physicsengine.Forthesimulatedhumanoidrobot,
+4202
+nuJ
+81
+]OR.sc[
+2v60501.3042:viXra

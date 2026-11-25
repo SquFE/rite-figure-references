@@ -1,0 +1,303 @@
+[
+  {
+    "id": "01_asap",
+    "name": "ASAP",
+    "year": 2025,
+    "p": "066",
+    "title": "ASAP: Aligning Simulation and Real-World Physics for Learning Agile Humanoid Whole-Body Skills",
+    "box": [
+      96,
+      400,
+      1130,
+      1239
+    ],
+    "kind": "动作序列",
+    "note": "把不同技能排成横向时间序列，以连续姿态突出动态表现；不同服装和场景帮助区分技能。",
+    "borrow": "借鉴起始、关键动作、结束的完整序列。你们应把恢复任务的一帧保留下来。",
+    "source": "RSS 正式版",
+    "url": "https://www.roboticsproceedings.org/rss21/p066.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p066.pdf",
+    "venue": "RSS 2025",
+    "page_image": "01_asap"
+  },
+  {
+    "id": "02_amo",
+    "name": "AMO",
+    "year": 2025,
+    "p": "061",
+    "title": "AMO: Adaptive Motion Optimization for Hyper-Dexterous Humanoid Whole-Body Control",
+    "box": [
+      96,
+      348,
+      1125,
+      1039
+    ],
+    "kind": "实景 + 物理标注",
+    "note": "以真实操作场景为主体，用红色箭头、厘米数和关节方向线直接解释动作难度。",
+    "borrow": "可标出威胁运动方向、避让方向与安全间隙；数字必须来自真实测量。",
+    "source": "作者 arXiv 版本",
+    "arxiv": "https://arxiv.org/abs/2505.03738",
+    "url": "https://www.roboticsproceedings.org/rss21/p061.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p061.pdf",
+    "venue": "RSS 2025",
+    "page_image": "02_amo"
+  },
+  {
+    "id": "03_beamdojo",
+    "name": "BeamDojo",
+    "year": 2025,
+    "p": "068",
+    "title": "BeamDojo: Learning Agile Humanoid Locomotion on Sparse Footholds",
+    "box": [
+      96,
+      426,
+      1128,
+      921
+    ],
+    "kind": "同场景多帧叠影",
+    "note": "在同一背景叠放多个时刻的机器人，用橙色箭头表现方向；下方小图补充窄梁和外力扰动。",
+    "borrow": "非常适合呈现避障轨迹：保持相机固定，叠加运动阶段，并用单独颜色标示来袭物。",
+    "source": "RSS 正式版",
+    "url": "https://www.roboticsproceedings.org/rss21/p068.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p068.pdf",
+    "venue": "RSS 2025",
+    "page_image": "03_beamdojo"
+  },
+  {
+    "id": "04_homie",
+    "name": "HOMIE",
+    "year": 2025,
+    "p": "070",
+    "title": "HOMIE: Humanoid Loco-Manipulation with Isomorphic Exoskeleton Cockpit",
+    "box": [
+      98,
+      386,
+      1130,
+      934
+    ],
+    "kind": "多任务矩阵",
+    "note": "九个子场景展示操作任务，每个子场景内部再用少量连续帧表现过程，传达能力覆盖面。",
+    "borrow": "用行走、搬运、取放三种任务展示同一应急模块；每格给出可辨识的任务语境。",
+    "source": "RSS 正式版",
+    "url": "https://www.roboticsproceedings.org/rss21/p070.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p070.pdf",
+    "venue": "RSS 2025",
+    "page_image": "04_homie"
+  },
+  {
+    "id": "05_hugwbc",
+    "name": "HugWBC",
+    "year": 2025,
+    "p": "067",
+    "title": "A Unified and General Humanoid Whole-Body Controller for Versatile Locomotion",
+    "box": [
+      151,
+      355,
+      1068,
+      824
+    ],
+    "kind": "按能力维度分组",
+    "note": "按步态、上身任务和动态组合分行组织，通过行的结构体现不同能力维度。",
+    "borrow": "可分为任务连续性、避让类型、控制器适配三组；避免把不同层次的证据混成一排。",
+    "source": "RSS 正式版；标题按 PDF（目录使用 Fine-Grained Locomotion）",
+    "url": "https://www.roboticsproceedings.org/rss21/p067.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p067.pdf",
+    "venue": "RSS 2025",
+    "page_image": "05_hugwbc"
+  },
+  {
+    "id": "06_langwbc",
+    "name": "LangWBC",
+    "year": 2025,
+    "p": "065",
+    "title": "LangWBC: Language-directed Humanoid Whole-Body Control via End-to-end Learning",
+    "box": [
+      111,
+      347,
+      1143,
+      673
+    ],
+    "kind": "简图 + 动作序列",
+    "note": "左侧用极简模块解释输入和策略，右侧同场景连续动作；底部括号标出命令阶段，横向箭头强调切换。",
+    "borrow": "最适合你们的横幅：左侧画参考中断与冻结跟踪器，右侧画执行任务 → 威胁出现 → 避让 → 恢复。",
+    "source": "RSS 正式版",
+    "url": "https://www.roboticsproceedings.org/rss21/p065.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p065.pdf",
+    "venue": "RSS 2025",
+    "page_image": "06_langwbc"
+  },
+  {
+    "id": "07_gettingup",
+    "name": "HUMANUP",
+    "year": 2025,
+    "p": "063",
+    "title": "Learning Getting-Up Policies for Real-World Humanoid Robots",
+    "box": [
+      101,
+      357,
+      1127,
+      981
+    ],
+    "kind": "完整恢复过程",
+    "note": "前两行用六帧展示仰卧起身与俯卧翻身，第三行展示不同地形；行标签明确说明能力。",
+    "borrow": "用连续帧证明中断后的恢复过程，起始与结束状态都应完整可见。",
+    "source": "作者 arXiv 版本",
+    "arxiv": "https://arxiv.org/abs/2502.12152",
+    "url": "https://www.roboticsproceedings.org/rss21/p063.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p063.pdf",
+    "venue": "RSS 2025",
+    "page_image": "07_gettingup"
+  },
+  {
+    "id": "08_standingup",
+    "name": "HoST",
+    "year": 2025,
+    "p": "064",
+    "title": "Learning Humanoid Standing-up Control across Diverse Postures",
+    "box": [
+      98,
+      403,
+      1129,
+      1044
+    ],
+    "kind": "多姿态 + 鲁棒性",
+    "note": "按 Diverse Postures 和 Robustness 分组，用场景中的连续姿态展示起身，并加入推扰、负载等条件。",
+    "borrow": "把“不同任务起点”和“不同突发威胁”分开展示，让泛化对象清楚。",
+    "source": "RSS 正式版",
+    "url": "https://www.roboticsproceedings.org/rss21/p064.html",
+    "pdf": "https://www.roboticsproceedings.org/rss21/p064.pdf",
+    "venue": "RSS 2025",
+    "page_image": "08_standingup"
+  },
+  {
+    "id": "09_exbody",
+    "name": "ExBody",
+    "year": 2024,
+    "p": "107",
+    "title": "Expressive Whole-Body Control for Humanoid Robots",
+    "box": [
+      96,
+      381,
+      1129,
+      1008
+    ],
+    "kind": "真实交互拼图",
+    "note": "以户外、人机互动和表达性动作组成三行照片墙；不靠复杂架构图，靠真实语境建立直觉。",
+    "borrow": "选择有明确人物、物体和任务关系的画面；不要让机器人姿态成为唯一信息。",
+    "source": "作者 arXiv 版本",
+    "arxiv": "https://arxiv.org/abs/2402.16796",
+    "url": "https://www.roboticsproceedings.org/rss20/p107.html",
+    "pdf": "https://www.roboticsproceedings.org/rss20/p107.pdf",
+    "venue": "RSS 2024",
+    "page_image": "09_exbody"
+  },
+  {
+    "id": "10_humanoidbench",
+    "name": "HumanoidBench",
+    "year": 2024,
+    "p": "061",
+    "title": "HumanoidBench: Simulated Humanoid Benchmark for Whole-Body Locomotion and Manipulation",
+    "box": [
+      103,
+      342,
+      1123,
+      598
+    ],
+    "kind": "四场景横幅",
+    "note": "四个大小一致的仿真场景并列，展示操作、搬运、导航和厨房任务，信息少而明确。",
+    "borrow": "适合宽而矮的版式，借鉴等宽模块与统一相机尺度；你们还需加上应急发生的时间关系。",
+    "source": "作者 arXiv 版本",
+    "arxiv": "https://arxiv.org/abs/2403.10506",
+    "url": "https://www.roboticsproceedings.org/rss20/p061.html",
+    "pdf": "https://www.roboticsproceedings.org/rss20/p061.pdf",
+    "venue": "RSS 2024",
+    "page_image": "10_humanoidbench"
+  },
+  {
+    "id": "11_dodgeball",
+    "name": "Humanoid Dodgeball",
+    "year": 2026,
+    "title": "Humanoid Dodgeball: Learning Fast Dynamic Obstacle Avoidance Motions for Humanoids",
+    "url": "https://arxiv.org/abs/2610.40003v1",
+    "pdf": "https://arxiv.org/pdf/2610.40003v1",
+    "venue": "arXiv 2026 · v1",
+    "source": "用户指定 arXiv:2610.40003v1；未核实会议归属",
+    "page_image": "11_arxiv_2610.40003v1-p1",
+    "box": [
+      674,
+      338,
+      1070,
+      806
+    ],
+    "kind": "半透明动作叠影",
+    "note": "上下两幅实景分别展示向前迈步和向后跳跃。机器人与球的多个时刻叠在同一画面，透明度制造时间感；首图本身没有复杂模块。",
+    "borrow": "直接参考叠帧做法：固定相机、背景只保留一次、抠出机器人和来袭物。但要额外用 t₀–t₃ 或箭头标明时序，避免多个人影相互遮挡。",
+    "method_image": "11_arxiv_2610.40003v1-p3",
+    "method_box": [
+      108,
+      117,
+      1116,
+      469
+    ],
+    "method_page": 3,
+    "method_note": "Figure 2 将动作先验、威胁计算、奖励与部署分区。它是完整方法图；RITE 首图可只借鉴模块分区，不必放训练细节。"
+  },
+  {
+    "id": "12_safefall",
+    "name": "SafeFall",
+    "year": 2025,
+    "title": "SafeFall: Learning Protective Control for Humanoid Robots",
+    "url": "https://arxiv.org/abs/2511.18509",
+    "pdf": "https://arxiv.org/pdf/2511.18509",
+    "venue": "arXiv 2025 · v1",
+    "source": "用户指定链接当前返回 arXiv:2511.18509v1；未核实会议归属",
+    "page_image": "12_arxiv_2511.18509-p1",
+    "box": [
+      106,
+      422,
+      1119,
+      938
+    ],
+    "kind": "一条主序列 + 三个子场景",
+    "note": "上方跨整行展示跌落动作序列，下方三个场景展示后倒、跑动中跌倒和侧倒；短语与虚线圈把动作和保护机制对应起来。上行更像连续画面拼接，下方多处使用重叠姿态。",
+    "borrow": "最适合借鉴整体层级：大场景讲完整过程，小场景讲覆盖范围。你们应在主场景保留正常任务和恢复任务，辅场景展示不同任务语境。",
+    "method_image": "12_arxiv_2511.18509-p4",
+    "method_box": [
+      115,
+      106,
+      1108,
+      479
+    ],
+    "method_page": 4,
+    "method_note": "Figure 2 右侧 Deployment 用 Fall Predictor 分流至 Nominal Policy 或 Fall Policy。可借鉴少量方框解释干预位置；RITE 应按实际设计画在参考层，并标明恢复。"
+  },
+  {
+    "id": "13_pacman",
+    "name": "PAC-MAN",
+    "year": 2026,
+    "title": "PAC-MAN: Perception-Aware CBF-RL for Whole-Body Safety in Humanoid Dodgeball",
+    "url": "https://arxiv.org/abs/2607.28623v2",
+    "pdf": "https://arxiv.org/pdf/2607.28623v2",
+    "venue": "arXiv 2026 · v2",
+    "source": "用户指定 arXiv:2607.28623v2；未核实会议归属",
+    "page_image": "13_arxiv_2607.28623v2-p1",
+    "box": [
+      624,
+      313,
+      1118,
+      687
+    ],
+    "kind": "动作叠影 + 感知信息小窗",
+    "note": "左侧实景叠加机器人和红球的连续位置，右侧竖排 Raw Depth、Segmentation、Policy Observation，直接呈现机器人看到了什么。",
+    "borrow": "借鉴在照片旁用小区域解释关键输入。若视觉不是你们这篇的主要贡献，小窗应优先留给触发、中断和恢复的关系。",
+    "method_image": "13_arxiv_2607.28623v2-p3",
+    "method_box": [
+      106,
+      101,
+      1114,
+      534
+    ],
+    "method_page": 3,
+    "method_note": "Figure 2 从机载相机、感知处理到策略执行，另用虚线框标明训练模块。首图保留必要输入和控制接口即可，训练公式适合放到正文方法图。"
+  }
+]

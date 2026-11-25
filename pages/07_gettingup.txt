@@ -1,0 +1,34 @@
+Learning Getting-Up Policies for
+Real-World Humanoid Robots
+Xialin He∗1 Runpei Dong∗1 Zixuan Chen2 Saurabh Gupta1
+1University of Illinois Urbana-Champaign 2Simon Fraser University
+(a) Getting Up from Supine (i.e., Lying Face Up) Poses
+(b) Rolling Over from Prone (i.e., Lying Face Down) Poses
+(c) Getting up on Different Terrains
+Fig. 1: HUMANUP provides a simple and general two-stage training method for humanoid getting-up tasks, which can be
+directly deployed on Unitree G1 humanoid robots [75]. Our policies showcase robust and smooth behavior that can get up from
+diverse lying postures (both supine and prone) on varied terrains such as grass slopes and stone tiles.
+Abstract—Automatic fall recovery is a crucial prerequisite robust to variations in initial configuration and terrains. We find
+beforehumanoidrobotscanbereliablydeployed.Hand-designing these innovations enable a real-world G1 humanoid robot to get
+controllers for getting up is difficult because of the varied up from two main situations that we considered: a) lying face up
+configurations a humanoid can end up in after a fall and the and b) lying face down, both tested on flat, deformable, slippery
+challenging terrains humanoid robots are expected to operate on. surfaces and slopes (e.g., sloppy grass and snowfield). This is
+This paper develops a learning framework to produce controllers one of the first successful demonstrations of learned getting-up
+thatenablehumanoidrobotstogetupfromvaryingconfigurations policies for human-sized humanoid robots in the real world.
+on varying terrains. Unlike previous successful applications of Project page: https://humanoid-getup.github.io/
+learning to humanoid locomotion, the getting-up task involves
+complex contact patterns (which necessitates accurately modeling I. INTRODUCTION
+of the collision geometry) and sparser rewards. We address
+these challenges through a two-phase approach that induces a This paper develops learned controllers that enable a hu-
+curriculum. The first stage focuses on discovering a good getting- manoidrobottogetupfromvariedfallconfigurationsonvaried
+up trajectory under minimal constraints on smoothness or speed terrains. Humanoid robots are susceptible to falls, and their
+/ torque limits. The second stage then refines the discovered
+reliance on humans for fall recovery hinders their deployment.
+motions into deployable (i.e. smooth and slow) motions that are
+Furthermore, as humanoid robots are expected to work in
+∗ Equalcontributions. environments involving complex terrains and tight workspaces
+5202
+rpA
+72
+]OR.sc[
+2v25121.2052:viXra

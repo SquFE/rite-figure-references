@@ -1,0 +1,584 @@
+PAGE 1
+PAC-MAN: Perception-Aware CBF-RL for Whole-Body Safety
+in Humanoid Dodgeball
+Lizhi Yang, Junheng Li and Aaron D. Ames
+Abstract—We present PAC-MAN, a perception-aware CBF-
+RL framework that couples control-barrier safety with
+deployment-realistic onboard sensing for whole-body hu-
+manoid dodgeball. The deployed policy sees the ball only
+as segmentation-masked depth from a head-mounted camera,
+whiletraining-timeCBFguidancerepresentsclearancetoevery
+body link, and an adversarial motion prior regularizes the
+resulting evasive reflexes. We evaluate on a controlled any-
+link contact benchmark with seeded throws in two regimes:
+single throws and a deployment loop in which the robot
+walks back to its station and recovers between throws. On
+this benchmark, the policy comes within a few points of
+a privileged state oracle: a fixed onboard camera alone is
+adequate for evasion. We find that usable barrier structure
+depends on perceptual observability: Joint-CBF gives the best
+performance with accurate ball states, degrades under fixed-
+camera observations when used only as training guidance, and
+recoverswithaball-trackinggimbalorprivilegedruntimefilter.
+We therefore deploy a lightweight Link-CBF policy zero-shot
+ontheUnitreeG1intherealworld,whereittoleratesimperfect Fig.1:Perception-awaredodgeballcouplessafetyandsensing:ahumanoid
+perception, succeeds on 95% of throws, and uses semantic must infer an incoming threat from a head-mounted depth camera, move
+segmentation to dodge different balls. everythreatenedlinkoutofitspath,andpreservebalancewithoutprivileged
+ballstatesatdeployment.
+I. INTRODUCTION
+Humanoid robots operating around moving objects must have to be treated as one coupled safety problem rather than
+react within a fraction of a second, and the evasion itself as independent modules.
+must not cost them their balance. Dodgeball isolates this We study this coupling through perception-aware hu-
+safety problem in a short-horizon, whole-body setting: the manoid dodgeball (Fig. 1). A ball is launched toward a
+robotmustperceiveanincomingball,determinewhichlinks humanoid robot, which must avoid contact with every body
+are threatened, and coordinate the torso, arms, and legs link and preserve balance using only proprioception and
+quickly enough to avoid contact while remaining upright. onboard depth at deployment. Unlike navigation around a
+Humans solve the same problem by keeping their eyes on mappedobstacle,thehazardistransient,andtherobothasno
+theballandmovingtheirwholebodyoutofitspath.Recent nominalvelocitycommandorreferencemotionthatspecifies
+learning-based controllers can produce dynamic humanoid when and how to evade. The short observation window and
+locomotion [1], [2], whole-body imitation [3]–[5], and visu- whole-body collision geometry make dodgeball a direct test
+allyconditionedskills[6],[7],butreactivewhole-bodysafety of safety under partial observation.
+from onboard vision remains difficult [8], [9], especially for We present PAC-MAN, a perception-aware CBF-RL
+a humanoid. framework for humanoid dodgeball. The central question is
+Controlbarrierfunctions(CBFs)encodecollision-freesets how much barrier structure a policy can internalize when it
+and correct unsafe commands, provided the relevant state is receives only deployment-realistic observations. PAC-MAN
+available [10]. Onboard perception breaks this convenient studies two levels: Link-CBF, a lightweight per-link reward
+assumption:theincomingobjectmaybevisibleonlybriefly, used during training, and Joint-CBF, a stronger whole-body
+may leave the camera field of view, or may appear as a few joint-space projection that can either guide training or stay
+noisy depth pixels. CBF-RL can move barrier information active at test time as a privileged runtime filter. The two
+into policy training [11], but a deployed policy can internal- levels separate learned barrier-guided behavior from online
+izeonlyasmuchsafetystructureasitsobservationssupport. barrier enforcement.
+The threat representation and the barrier design therefore How well the learned reflex works depends on what
+perception tells the policy about the threat. The deployed
+CaliforniaInstituteofTechnology,CA91106,USA systemsegmentstheballinRGBandmasksthedepthimage
+Correspondingauthoremail:lzyang@caltech.edu.Thisworkis
+down to a compact ball-only observation. An active gimbal,
+supportedbyTheDowChemicalCompanyproject#227027AWandinpart
+byTechnologyInnovationInstitute. studied in simulation, tests whether keeping the threat in
+6202
+peS
+92
+]OR.sc[
+2v32682.7062:viXra
+
+PAGE 2
+view for longer makes the stronger barrier structure usable. [19]investigatesdexterouswhole-bodycontrol,[20]usesop-
+An adversarial motion prior (AMP) regularizes how the timizedtrajectoriestotrainpolicies,and[5]constructsastan-
+humanoid moves, so the evasions come out as crouches, dardized whole-body imitationtraining pipeline. Retargeting
+leans, sidesteps, and leaps; the safety structure itself comes qualityalsomattershere,bothforgeneralhumanoidtracking
+from the CBF terms. [21] and for interaction-preserving loco-manipulation [22].
+We use a controlled, contact-based benchmark to ask Fordodgeball,amotionpriorisattractivebecausethereward
+three questions: whether barrier guidance improves whole- for “not being hit” is too semantically sparse and geometric
+body avoidance, how much barrier structure a policy can to specify how a humanoid should move. We select human
+internalize without a runtime filter, and how the available dodging motions as priors and also condition the policy on
+perception changes the answer. The benchmark calibrates a perception stream, thus combining the motion prior with
+on-target throws against a frozen statue and covers both exteroceptive information to produce whole-body evasive
+single throws and a deployment loop in which the robot reflexes.
+walksbacktoitsstationandrecoversbetweenthrows.Across Perception-aware safety, parkour, and fast-object tasks.
+a privileged state oracle, a fixed onboard camera, and an
+The closest conceptual neighbor to perception-aware dodge-
+oracle-aimed active gimbal, we find that stronger barrier
+ball is safe agility under partial exteroception. Quadruped
+structureneedsmoreinformativeobservations.ThefullJoint-
+parkour [23], [24] and agile-but-safe locomotion [8] show
+CBF with runtime filtering is strongest when accurate ball
+how perception, skill selection, recovery, and safety layers
+states are available, whereas the lighter Link-CBF is the
+can support fast motion around obstacles, while humanoid
+bestdeployableoptionunderlimitedonboardperception.We
+parkourandperception-awarelocomotion systems[2],[25]–
+validate this design choice by deploying the fixed-camera
+[27] extend this to higher-dimensional bodies with depth-
+Link-CBF policy zero-shot on a Unitree G1 using only
+or elevation-conditioned policies for jumping, leaping, and
+onboard depth and proprioception.
+terrain traversal. Related work studies the same percep-
+tion–speed–stability tradeoff through depth conditioning [7],
+A. Contributions
+onlinepolicyswitching[28],andactivegaze[29].Dodgeball
+Our contributions are as follows: differs from these terrain-centered settings because the haz-
+• we introduce perception-aware CBF-RL for whole- ard is a fast-moving object rather than traversable terrain.
+body humanoid reaction, pairing deployment-realistic The ball may be visible only briefly, so the policy must
+observations with Link-CBF and Joint-CBF safe sets forecast imminent body contact and produce an evasive
+over every body link; the policy can internalize these whole-body response instead of merely choosing footholds.
+structuresduringtraining,oraruntimefiltercanenforce Task-centered fast-object work makes this timing pressure
+them when state information permits. explicit:[30]useshumanoidtabletennistostudysub-second
+• we evaluate under an any-link contact criterion and ball prediction, task planning, and whole-body RL control.
+show that the appropriate barrier mechanism depends Dodgeball shares the timing but changes the objective from
+on the threat representation: Joint-CBF benefits from striking to avoiding contact. This shift stresses egocentric
+accurate ball state and oracle-aimed tracking, while observability:anonboarddepthcameramustprovideenough
+Link-CBF remains effective with a fixed camera and information for the body to leave the ball’s path before
+no runtime filter. impact.
+• we deploy the fixed-camera Link-CBF policy zero- Whole-body avoidance and safety. Reactive safety spans
+shot on the Unitree G1 using only onboard depth and bothrecoveringbalanceafteradisturbanceviacapture-point
+proprioception; the robot succeeds on 95% of throws, and push-recovery control [31], [32], and avoiding contact
+and semantic segmentation lets the same policy evade in the first place via control barrier functions [10], collision-
+different balls. We will release the benchmark and free MPC [33], and fast collision-free motion generation
+training pipeline. [34].Mostrelatedtooursafetytreatment,[11]injectssafety
+structure during humanoid training and removes the runtime
+B. Related Work filteratdeployment,and[9]concurrentlyexploresegocentric
+tactile and proximity sensing as a modality complementary
+Motion imitation and priors for humanoid control. Mo-
+to the vision used here. We study depth-based dodgeball on
+tionimitationhaslongprovidedapracticalroutetonaturalis-
+the Unitree G1, using perception-aware CBF-RL to couple
+tic,high-dimensionalcontrol.[12]showedthatRLcantrack
+onboard visual observations with per-link safety guidance
+reference motions reliably, [13] replaced explicit tracking
+and motion-regularized whole-body evasion.
+withanadversarialdiscriminatorovermotionfeatures,which
+yields a style reward compatible with a task objective, and
+II. SAFETY-CRITICALPERCEPTION-AWAREDODGEBALL
+[14], [15] learned reusable skill and style embeddings over
+large motion datasets. These build on a broader body of We formulate perception-aware dodgeball as a safety-
+legged learning [16]–[18] trained from task rewards, com- critical whole-body reaction problem under partial observa-
+mand tracking, and domain randomization. Recent whole- tion. The robot must avoid contact with an incoming object
+body tracking systems move closer to our humanoid setting: while preserving balance, yet its deployed policy has only
+
+PAGE 3
+Fig.2:Pipelineoverview.Thepolicymapstemporallystackedball-onlydepthandproprioceptionto29-Djointtargets;duringtraining,ball-to-linkgeometry
+supplieswhole-bodyCBFguidancethatthepolicyinternalizesfordeployment.
+limited onboard sensing. This information constraint affects C. Whole-body safety metric
+both which safety mechanisms we can use and how we
+The robot is hit if the ball contacts any body link and
+measure success.
+fallsifthetorsoorientation,baseheight,orsustainedcrouch
+A. Task and observations crosses a threshold. A trial succeeds if neither event occurs
+within the reaction window. The benchmark reports reset
+A ball is launched toward a standing humanoid, which
+anddeployment regimesin§IV; resetsuccessis theprimary
+mustavoidbeingstruckwhilepreservingbalance.Wemodel
+single-throwmetric.Thiscontact-basedscoreisintentionally
+the task as a partially observed Markov decision process. At
+stricterthanmeasuringthedistancefromtheballtothepelvis
+control step t, the policy π (a | o ) emits joint-position
+θ t t alone: many failures are limb grazes, so a method that only
+targets a ∈ R29 (offsets from a nominal pose, tracked by
+t protects the base can appear safe while still being struck.
+PD actuators at 50Hz).
+The defining constraint is deployability: the policy obser- III. METHODS
+vationo containsonlysignalscomputableonhardwarefrom
+t A. Safety-guided learning
+onboard sensing,
+PAC-MAN trains a perception-aware policy to map par-
+(cid:0) (cid:1)
+o t = D t , q t ,q˙ t , ω t , g t , a t−1 , (1) tial onboard observations to whole-body actions shaped by
+where D is the depth observation, q ,q˙ are joint posi- barrierinformationavailableonlyduringtraining.Privileged
+t t t
+tions/velocities, ω is the base angular velocity, g is the ball and link states instantiate the barrier conditions, while
+t t
+projected gravity, and a t−1 is the previous action. For the the policy receives only the onboard observation o t of
+camera-based policies, the ball’s state is never part of o ; Eq. (1). We use CBF-RL to inject violations of these condi-
+t
+whatever the policy knows about the ball, it must infer from tionsintopolicyoptimization[11],sothepolicyinternalizes
+depth. the safety structure during training and needs no privileged
+geometry at deployment. Link-CBF is a lightweight per-
+B. Projectile threat model
+link reward that extends the pelvis-centered task objective
+Balls are thrown on an intermittent timer that leaves a to every body link, while Joint-CBF is a stronger joint-
+recovery window between throws. The default distribution space projection that can shape training or remain active as
+launches from a frontal cone (within ±25◦ of heading, aprivilegedruntimefilter.Segmentation-maskeddepthisthe
+2-3m ahead) with a flight time of roughly 0.6s, which threat representation we deploy, and an adversarial motion
+sets the reaction window; the aim point leads the robot’s prior regularizes the resulting reactions without defining the
+velocity.Wemixtwothreattypesequallysothepolicylearns safe set.
+both evasions: a descending ball that falls across the legs Figure 2 shows the full pipeline. The full reward is
+(sidestep/step-over)andalow-arcballthatrisestotorso/head
+r = rcore + rcbf +λ rstyle, (2)
+height (duck/lean). Throw heights are calibrated against a t t t s t
+(cid:124) (cid:123)(cid:122) (cid:125)
+frozen-statue control (§IV) so that essentially every throw is rtask
+t
+on-target. We partition environments at reset into 20% ball- where the task reward pairs the distance-to-core evasion
+free standing anchors and 80% ball-thrown evade episodes. term rcore of prior humanoid dodgeball work [15] with the
+
+PAGE 4
+control-barrier term rcbf. The reward also contains station-
+hold, posture, and smoothness terms that we omit from the
+notation, and rstyle regularizes the form of the motion (§III-
+D).TableIgivesthefullrewardstackwithformulationsand
+weights. The distance-to-core term rewards keeping the ball
+far from the pelvis while otherwise standing still,
+(cid:16) (cid:17)
+r t core = w pos 1−e−kpos∥pb t −pp t el∥ + w vel e−kvel∥v x p y el ,t ∥2 ,
+(3)
+where pb,ppel are the ball and pelvis positions and vpel
+xy
+is the horizontal base velocity. The distance term saturates
+once the ball is far, so the robot settles rather than flees, Fig. 3: Whole-body barrier geometry across representative motion-prior
+clips;theoutlinesshowtheunionofper-linkkeep-outshellsasthehumanoid
+and the stillness term makes it move only when it must
+crouches,leaps,andsidesteps.Thereferencesetcontains1minuteand43
+evade. The CBF term is the safety axis we vary in §IV: secondsofhumanmotionretargetedtotheUnitreeG1using[35].
+the no-barrier baseline sets rcbf =0, and the Link-CBF and
+Joint-CBF forms of §III-B add increasing barrier structure.
+The hit termination is active from the first training iteration condition online during deployment.
+and carries no explicit penalty: the only cost of being hit The Joint-CBF condition adds a stronger whole-body
+is the future reward foregone by an early episode end. joint-space CBF module during training. The policy’s joint-
+Training follows the asymmetric actor-critic paradigm: the position target qdes (the nominal pose plus a ) defines an
+t
+value function V (s ) observes a privileged state s that implicit desired joint velocity vdes = (qdes −q )/∆t. The
+ϕ t t t
+augments the policy observation o of Eq. (1) with the module defends every body point with the squared-distance
+t
+ground-truthballrelativeposition/velocity,radius,avisibility barrierh =∥pb−p ∥2−D2,whereD =ρb+ρ +d isa
+i i i i i buf
+gate, and full-body link kinematics. These privileged signals keep-out radius, and at each step selects the most-threatened
+supporttrainingandbarriercomputationbutarediscardedat point i⋆ = argmin h . Enforcing h˙ ≥ −αh +δ then
+i i i⋆ i⋆
+deployment, so the policy must recover the relevant threat yields a single affine constraint on the joint velocity,
+information from o t alone. η⊤v ≤ b, η =2J⊤r, b=αh +2r⊤p˙b−δ, (6)
+i⋆ i⋆
+B. Whole-body barriers wherer =pb−p ,J isthepoint’spositionalJacobian,and
+i⋆ i⋆
+δ =δ [1−T/T ] isan urgencymarginthat tightens
+Control barrier functions encode a safe set through a max alert +
+the constraint as the time to contact T drops below T .
+function whose nonnegative superlevel set should remain alert
+The barrier-projected velocity is the closed-form projection
+invariant under an admissible controller [10]. PAC-MAN
+of vdes onto this half-space,
+uses barrier information at two levels to study what a policy
+caninternalizefrompartialperceptionandwhatstillrequires (cid:2) η⊤vdes−b (cid:3)
+v⋆ = vdes − + η, (7)
+direct online enforcement. The lightest form sets the safety ∥η∥2
+term of Eq. (2) to a per-link clearance reward, rcbf =
+which equals vdes whenever the constraint already holds or
+λ rclear. We form the clearance for every robot link i,
+cbf no threat is sensed. Joint-CBF adds two shaping terms to
+h i = ∥pb−p i ∥− (cid:0) ρb+ρ i (cid:1) , (4) rcbf: a correction cost −λ corr ∥v⋆ − vdes∥2 that penalizes
+where pb,p are the ball and link positions and ρb,ρ their how hard the filter has to intervene and a buffer cost
+i i (cid:2) (cid:3)2
+effective radii (collision cross-section plus a small margin), −λ buf d safe − h min + on the linear clearance h min of
+and its closing rate h˙ follows from the relative ball-link the most-threatened point, which discourages skimming the
+i
+velocity. The corresponding whole-body collision-free set is keep-out boundary. At evaluation, we remove this training-
+C = (cid:84) {h ≥ 0}, visualized in Fig. 3, so protecting only time module, so the policy must execute its own learned
+i i
+the pelvis is insufficient whenever the ball threatens an arm, avoidancefromdepthandproprioceptionalone.Thisreward-
+leg, or torso link. The reward penalizes only violations of onlyJoint-CBFconditionmeasureshowmuchofthestronger
+the barrier condition h˙ +αh ≥0 at the most-binding link: barrier structure the perception-aware policy can internalize.
+i i
+rclear = min clip (cid:0) h˙ +αh , −c, 0 (cid:1) , (5) Wealsoreportaprivilegedceiling,denoted+filter,thatkeeps
+i i i the projection of Eq. (7) active at test time and executes
+gatedtozerounlessathrownballisairborneandmoving,so q + v⋆∆t in place of the policy target. The filter reads
+t
+thenominalstandisuntouched.Theclass-Ktermαh ramps ground-truth ball states online, so it is not a deployable
+i
+the penalty up over the final approach rather than only at vision-only configuration; it measures what direct barrier
+contact,andtheclipckeepsthetermfromactinglikeahard enforcementachieveswhenaccuratethreatstateisavailable.
+terminal penalty. This lightweight per-link barrier, which we
+C. Perception
+call Link-CBF, represents threats to limbs and other links
+that the pelvis-centered rcore does not see. Because Link- Thebarriersabovearecomputedfromballandlinkgeom-
+CBF enters only through the training reward, it guides the etry during training, but the deployed policy must infer the
+policy toward the safe set but does not enforce the barrier relevant threat geometry from its observations. Perception,
+
+PAGE 5
+therefore, controls how faithfully the policy can associate a TABLEI:Rewardtermsofthedodgetaskwithformulations
+visualthreatwiththebarriersignalusedtotrainit.Weisolate and training weights. I[thr] is the throw indicator function.
+this informational effect with three regimes that change the
+ball representation but leave the underlying control task Term Expression Weight
+unchanged: Task, safety, and style
+State oracle. A symmetric actor-critic that observes the 0.9
+(cid:0) 1−e−0.3∥pb−ppel∥(cid:1)
+Distance-to-core rcore 1.0
+ground-truth ball states directly (no camera). This is the +0.1e−∥vx p y el∥2
+safety-information upper bound. Link-CBF rclear min i clip(h˙ i +αh i ,−c,0) 0.27
+α=1, c=2
+Fixed depth camera. The focusing stage alone: the ball
+Joint-CBF correction −∥v⋆−vdes∥2/n 0.1
+j
+is segmented from the RGB-D stream of a single rigidly −I[thr] (cid:2) d −h (cid:3)2
+mounted head camera (102◦ horizontal FoV, 57◦ vertical Joint-CBF buffer safe min + 1.0
+d =0.1
+FoV, tilted 20◦ up). In simulation, we build this observation AMP style rstyle max sa (cid:2) f 0 e , 1− 1(cid:0) D −1 (cid:1)2(cid:3) 0.5
+from the simulator’s segmentation: pixels on the ball retain 4 ψ
+Station hold and posture
+their measured depth, every other pixel is set to the far
+plane, and the masked image is pooled to 16×9. We stack
+Station hold
+e−d2 home/1.52
+0.3
+the masked frame with older snapshots at sparse temporal Stillness when safe (1−I[thr])e−2∥vx p y el∥2 0.5
+Action rate when safe (1−I[thr])∥a −a ∥2 −0.05
+offsets rather than consecutive frames (specifically the last t t−1
+Base height
+e−(zdes−zpel)2/0.32
+1.0
+[0,3,8,18] frames with the camera stream at 50 Hz): they
+Angular stability
+e−∥ωxy∥2/π2
+0.5
+are far enough apart to encode looming and lateral motion
+while keeping the observation small enough for a feed- Regularizers and terminations
+forwardpolicy.Thecameraisrigidlymounted,soafastball Fall termination I[fall] −200
+Joint acceleration ∥q¨∥2 −2.5×10−7
+that leaves its field of view or shrinks below the angular
+Joint limit violation
+(cid:80) (cid:2)
+|q
+|−qlim(cid:3)
+−10
+resolution at range is unobservable. During training, we j j j +
+Action rate ∥a −a ∥2 −0.01
+randomize the masked observation with whole-ball dropout, Foot slip (cid:80) t t−1 ∥vf ∥2 −0.25
+ragged pixel dropout, depth jitter, and edge flicker to model f∈contact xy
+Self-collision contacts >10N −0.1
+failures of the real perception stack.
+Active gimbal (gaze). The second part of human-like
+perception added on top of the focusing stage: we mount transitions from transitions drawn from a reference set M
+the same camera on a 1-DoF pitch joint (±30◦, nominal of human-derived whole-body clips1 (crouching, leaning,
+position at 0◦) so that it can track the ball through its flight, sidestepping, leaping, and standing), and the policy receives
+in analogy to human gaze, which orients toward a threat to the style reward
+keep it foveated. The robot also receives the aim angle as rstyle = max (cid:104) 0, 1− 1(cid:0) D (s ,s )−1 (cid:1)2 (cid:105) , (8)
+proprioception. We establish the ceiling of this design by t 4 ψ t t+1
+driving the joint with an oracle that points the optical axis which favors reflex-like crouches, leans, and sidesteps over
+at the ball; the policy still dodges from depth alone, but arbitrary joint excursions. Training uses PPO and the AMP
+thecameraisperfectlyaimed.Thisisolatestheobservability discriminatorfromrsl rl[36],with8192parallelenviron-
+effectfromthecontrolproblem:thepolicyreceivesthesame ments for 20k iterations in mjlab [37], [38]. The depth feed
+low-resolution depth representation either way, but the ball is capped at 16×9 resolution. The full reward construction
+remains in view for more of its flight. is shown in Table I.
+Toward deployable active perception. The oracle-aimed
+IV. RESULTS
+gimbal requires the ground-truth ball states to aim, so it is
+We first evaluate the PAC-MAN framework in simulation
+a simulation ceiling. Closing the loop does not require the
+to quantify the impact of perception and safety structure;
+policy to learn the aim: a deployable version would drive
+then we verify the full stack on the physical robot. Figure 4
+the same pitch joint from the segmentation track already
+shows emergent evasion modes from both.
+computed by the focusing stage, pointing the camera at the
+tracked ball rather than exposing the aim as a policy action. A. Quantitative evaluation in simulation
+Realizing this tracker-aimed gimbal on the physical robot is
+In simulation, we compare the onboard fixed-camera pol-
+futurework,sinceitrequiresadditionalhardware;thesystem
+icy against a gimbal-mounted camera and a privileged state
+we deploy uses the fixed camera.
+oracle while varying the safety structure at each perception
+level, from no barrier to the full joint-space CBF with its
+D. Motion prior and training
+runtime filter. All policies are evaluated on the same set
+The CBF terms specify the safety structure of the task,
+of seeded throws and scored by the environment’s true
+buttheydonotprescribewhichdynamicallyfeasiblewhole-
+terminations: success requires avoiding contact with every
+body motion should realize an evasion. We therefore add an
+bodylinkandremainingupright,ratherthanrelyingonpelvis
+adversarialmotionprior(AMP)[13]asamotionregularizer.
+A discriminator D
+ψ
+is trained to distinguish policy state 1MotionDatabyBonesStudio-https://bones.studio/
+
+PAGE 6
+Fig.4:Emergentwhole-bodyevasionmodesinsimulation(left)andhardware(right).Crouching,leaning,andsidesteppingcoordinatethelegs,torso,and
+armstomovethreatenedlinksratherthanonlytranslatingthebase.Semanticsegmentationallowsthesamepolicytododgedifferentballs,shownwitha
+soccerball(toprow)andafoamball(lowertworows).
+clearance alone. A static robot survives only 4% of throws, and the full CBF-RL recipe, with the joint-space barrier
+which sets the on-target floor. We evaluate every policy at kept as its runtime filter, outperforms it (98%-99%). The
+a matched 20k-iteration checkpoint. We report two throw +filter column is the best mode in every row of Table II:
+regimes. Reset: We reset the robot between throws, and givenaccurateonlineballstates,runtimewhole-bodybarrier
+the robot dodges immediately. Deployment: A locomotion enforcement achieves the highest success rate at each per-
+controller returns the robot to the origin between throws ception level. This improvement requires ball states that our
+before the next dodge. We vary the safety reward along four onboard stack currently cannot supply.
+modes: Among the modes that run without runtime ball states,
+• No barrier uses the distance-to-core reward rcore only the ranking flips. Link-CBF is best on the fixed camera in
+(rcbf =0). both regimes (reset 90%, deployment 89%), above the no-
+• Link-CBF adds the lightweight per-link clearance bar- barrierbaseline(86%inboth)andwellabovethebareJoint-
+rier rclear as reward guidance (§III-B); this is the CBF, which drops to 76% in the deployment regime. Link-
+configuration we deploy on hardware. CBF extends safety guidance from pelvis clearance to every
+• Joint-CBF additionally trains with the whole-body body link; under the any-link contact criterion, it improves
+joint-space CBF module as reward guidance, evaluated fixed-camera success from 86% to 90% in reset and 89% in
+without a runtime filter. deployment.Itisthereforetherewardwedeployonhardware
+• +filter keeps the joint-space CBF as an online filter.2 (§IV-B).
+Onboard sensing costs only a few points of evasion. We theorize that the Joint-CBF gap comes from percep-
+Trained with the same Link-CBF reward, the fixed-camera tion: the policy is asked to internalize a whole-body barrier
+policy (90% reset, 89% deployment) is on par with the thatitcannotperceiveaccuratelyenough,anditlearnsworse
+state oracle (88% and 93%) despite seeing the ball only evasions instead. Two changes repair this, and both supply
+as a conservative masked depth (Table II). The oracle’s theballinformationthatthefixedcameralacks.Keepingthe
+best configurations (96-99%) sit fewer than ten points above joint-space CBF as an online filter hands exact ball states
+the policy we deploy. The fixed onboard camera alone is to the barrier itself and lifts the fixed camera to 90%-97%.
+therefore adequate for evasion; what perception changes is Givingthepolicyabetterviewworksaswell:withanoracle-
+which safety structure works. aimed, ball-tracking gimbal, the same Joint-CBF training
+With privileged ball states, the strongest safety configura- no longer hurts (deployment 90% versus 76% on the fixed
+tionachievesthehighestsuccessrates.Theplaindistance-to- camera) and beats its no-barrier counterpart with the full
+core baseline is already strong (96%-98% across regimes), safetystructure(i.e.+filter).Thisshowsthatthewhole-body
+barriersucceedsonlywhentheballissufficientlyobservable.
+2Thefilterreadsground-truthballstates,sorunningitonhardwarewould
+Fig. II (top) illustrates this: deployment success of Joint-
+require a highly accurate online ball state estimator that our vision stack
+doesnotprovide. CBF climbs steeply with ball observability, while Link-CBF
+
+PAGE 7
+average depth is not closing quickly enough, preventing a
+static object or over-sensitive segmentation from triggering
+dodges. If the track is absent, rejected by these checks,
+or lost, the policy receives an all-far frame rather than a
+false incoming ball. Proprioception comes from the robot’s
+IMU and encoders and uses a walk↔dodge mode switch
+to return the robot to a fixed location between throws. No
+ground-truth ball states, velocity estimates, or runtime CBF
+inputs are available at any point: the policy reacts purely to
+the conservative masked-depth feed, exactly as in the fixed-
+camera Link-CBF cells of Table II. We stress-test this stack
+Regime Perception Nobarrier Link-CBF Joint-CBF +filter Fall bythrowingballsattherobotfromthefront.Athrowcounts
+Stateoracle 98 88 96 99 0 as dodged only if the ball contacts no body link. The policy
+Reset Fixedcamera 86 90 83 97 0 dodges19of20throws(95%,TableIII).Fig.III(top)shows
+Gimbalcamera 96 95 91 97 0
+theestimatedbarriervaluehforeachthrow.Thehitisshown
+Stateoracle 96 93 95 98 0
+at contact, and the remaining throws clear the per-link keep-
+Deployment Fixedcamera 86 89 76 90 0
+Gimbalcamera 92 94 90 95 0 out shell by 0.05 to 1.7m. The sim-trained policy therefore
+transfers to the physical robot from onboard depth alone.
+TABLE II: Whole-body success (no link contact or fall)
+and fall rates (%) by throw regime, perception, and safety-
+reward mode (defined in §IV-A) at a matched 20k-iteration
+1.5
+checkpoint. Bold marks the deployed fixed-camera Link-
+CBFcells.Top:deploymentsuccessversusballobservability, 1.0
+one line per safety mode; Joint-CBF improves sharply with
+observability, Link-CBF remains consistent, and +filter re-
+0.5
+quires runtime ball states.
+0.0
+1 5 10 15 20
+throw
+stays nearly flat. Therefore, the design implication is that
+the strength of the safety structure must be matched to
+the information available. A hardware gimbal aimed by the
+same segmentation-based focusing stage that already feeds
+the policy is left as future work. We also compare against
+prior results reported in SMP [15] with an omnidirectional
+throw distribution (360◦, 8-10m, 12-15m/s in codebase)
+with oracle observations. Under this matched setting, PAC-
+MAN scores 98% reset, in line with their reported ∼99%.
+B. Hardware experiments
+We deploy the Link-CBF fixed-camera policy on the
+Unitree G1 with a head-mounted ZED Mini. On hardware,
+the perception node replaces the simulator’s segmentation
+with a learned tracker: an EfficientTAM track, initialized
+fromaclickedforegroundpoint,segmentstheballinRGBat
+∼60Hz, above the 50Hz control rate, so the masked-depth
+observation is effectively fresh with each control step. This
+also gives us the ability to dodge different balls since the
+trackercanbeinitializedonanyobjectofinterest.Anexam-
+pleofdodgingasoccerballinsteadofafoamballisshownin
+thetoprowofFig.4.Thetrackedobject’sZEDdepthpixels
+areretained,andallothersaresettofarrangebeforepooling
+tothesame16×9stacked-depthobservationusedintraining.
+Several filters keep this feed conservative: low-percentile
+poolingpreservestheballwhilerejectingisolatedZEDflying
+pixels; distance-aware mask-size checks reject masks that
+are too tall to be a dodgeball at their measured range; and
+an optional looming gate suppresses tracked clusters whose
+ℎdetamitse
+hit
+Throws Dodged Hit Falls Success(%)
+20 19 1 0 95
+TABLE III: Hardware dodge outcome: 20 balls thrown by
+hand at the deployed Link-CBF fixed-camera policy on the
+UnitreeG1(policyinput:onboarddepth;RGBusedonlyfor
+segmentation), with contact on any body link counted as a
+hit.Top:estimatedbarriervaluehforeachthrow;thedashed
+lineistheper-linkkeep-outshell(h=0),andthehit(throw
+4, red) is shown at contact.
+V. CONCLUSIONANDFUTUREWORK
+We presented PAC-MAN, a perception-aware CBF-RL
+framework for whole-body humanoid dodgeball, and de-
+ployed its fixed-camera Link-CBF policy on the Unitree
+G1 using only onboard depth and proprioception. PAC-
+MAN couples segmentation-masked depth with control-
+barrier guidance computed during training, and a human
+motion prior regularizes the form of the evasive reflexes.
+Our results show that perception-aware CBF-RL is a safety-
+informationco-designproblem:theappropriatebarrierstruc-
+ture depends on the threat representation available to the
+policy or filter. With accurate ball states, the Joint-CBF
+runtimefilteristhestrongestconfiguration,whereasthesame
+joint-spacebarrierusedonlyasrewardguidancedegradesthe
+fixed-camera policy. Link-CBF extends the pelvis-centered
+objectivetoeverybodylinkwhiletoleratinglimitedonboard
+perception, and the deployed policy succeeds on 95% of
+
+PAGE 8
+physical throws without privileged ball states or a runtime [17] J. Dao, H. Duan, and A. Fern, “Sim-to-real learning for humanoid
+filter. The segmentation front end also lets one policy evade box loco-manipulation,” in 2024 IEEE International Conference on
+RoboticsandAutomation(ICRA),pp.16930–16936,IEEE,2024.
+different balls. These results distinguish internalizing barrier
+[18] M. Dai, W. D. Compton, J. Li, L. Yang, and A. D. Ames, “Walk
+structure in a learned policy from enforcing a barrier online: the PLANC: Physics-guided rl for agile humanoid locomotion on
+internalization is limited by what the policy can infer, while constrainedfootholds,”arXivpreprintarXiv:2601.06286,2026.
+[19] J.Li,X.Cheng,T.Huang,S.Yang,R.-Z.Qiu,andX.Wang,“Amo:
+enforcement requires accurate threat state at runtime. Future
+Adaptive motion optimization for hyper-dexterous humanoid whole-
+work will close this perception-to-CBF loop with a physical body control,” in Proceedings of Robotics: Science and Systems,
+tracker-aimedgimbaloranaccurateonlineball-stateestima- (LosAngeles,CA,USA),June2025.
+[20] F. Liu, Z. Gu, Y. Cai, Z. Zhou, H. Jung, J. Jang, S. Zhao, S. Ha,
+tor and extend the task from dodging at a recovered stance
+Y. Chen, D. Xu, et al., “Opt2skill: Imitating dynamically-feasible
+to dodging while walking. whole-body trajectories for versatile humanoid loco-manipulation,”
+IEEERoboticsandAutomationLetters,2025.
+REFERENCES
+[21] J. P. Araujo, Y. Ze, P. Xu, J. Wu, and C. K. Liu, “Retargeting
+[1] Z. Gu, J. Li, W. Shen, W. Yu, Z. Xie, S. McCrory, X. Cheng, matters: General motion retargeting for humanoid motion tracking,”
+A.Shamsah,R.Griffin,C.K.Liu,etal.,“Humanoidlocomotionand arXivpreprintarXiv:2510.02252,2025.
+manipulation: Current progress and challenges in control, planning, [22] L. Yang, X. Huang, Z. Wu, A. Kanazawa, P. Abbeel, C. Sferrazza,
+and learning,” IEEE/ASME Transactions on Mechatronics, vol. 31, C.K.Liu,R.Duan,andG.Shi,“Omniretarget:Interaction-preserving
+no.2,pp.2300–2330,2026. data generation for humanoid whole-body loco-manipulation and
+[2] Z. Zhuang, S. Yao, and H. Zhao, “Humanoid parkour learning,” in scene interaction,” 2026 IEEE International Conference on Robotics
+Proceedings of The 8th Conference on Robot Learning (P. Agrawal, andAutomation(ICRA),2026.
+O. Kroemer, and W. Burgard, eds.), vol. 270 of Proceedings of [23] X.Cheng,K.Shi,A.Agarwal,andD.Pathak,“Extremeparkourwith
+MachineLearningResearch,pp.1975–1991,PMLR,06–09Nov2025. legged robots,” in 2024 IEEE International Conference on Robotics
+[3] Z.Chen,M.Ji,X.Cheng,X.Peng,X.B.Peng,andX.Wang,“Gmt: andAutomation(ICRA),pp.11443–11450,IEEE,2024.
+General motion tracking for humanoid whole-body control,” arXiv [24] D. Hoeller, N. Rudin, D. Sako, and M. Hutter, “Anymal parkour:
+preprintarXiv:2506.14770,2025. Learning agilenavigation forquadrupedal robots,”Science Robotics,
+[4] Z. Luo, Y. Yuan, T. Wang, C. Li, F. Castan˜eda, S. Chen, Z.-A. vol.9,no.88,p.eadi7566,2024.
+Cao, J. Li, D. Minor, Q. Ben, et al., “Sonic: Supersizing motion [25] J. Long, J. Ren, M. Shi, Z. Wang, T. Huang, P. Luo, and J. Pang,
+tracking for natural humanoid whole-body control,” arXiv preprint “Learning humanoid locomotion with perceptive internal model,”
+arXiv:2511.07820,2025. pp.9997–10003,2025.
+[5] Q.Liao,T.E.Truong,X.Huang,Y.Gao,G.Tevet,K.Sreenath,and [26] Z.Wu,X.Huang,L.Yang,Y.Zhang,X.Chen,P.Abbeel,R.Duan,
+C.K.Liu,“Beyondmimic:Frommotiontrackingtoversatilehumanoid A. Kanazawa, C. Sferrazza, G. Shi, et al., “Perceptive humanoid
+controlviaguideddiffusion,”arXivpreprintarXiv:2508.08241,2025. parkour:Chainingdynamichumanskillsviamotionmatching,”arXiv
+[6] S.Yin,Y.Ze,H.-X.Yu,C.K.Liu,andJ.Wu,“Visualmimic:Visual preprintarXiv:2602.15827,2026.
+humanoid loco-manipulation via motion tracking and generation,” [27] Z. Zhuang, S. Zhu, M. Zhao, and H. Zhao, “Deep whole-body
+arXivpreprintarXiv:2509.20322,2025. parkour,”arXivpreprintarXiv:2601.07701,2026.
+[7] Y. Hao, R. Yu, S. Luo, G. Zhang, J. Wu, and Q. Zhu, “CReF: [28] D.Baek,S.-H.Kim,andS.Ha,“BAT:Balancingagilityandstability
+Cross-modal and recurrent fusion for depth-conditioned humanoid via online policy switching for long-horizon whole-body humanoid
+locomotion,”arXivpreprintarXiv:2603.29452,2026. control,”arXivpreprintarXiv:2604.01064,2026.
+[8] T.He,C.Zhang,W.Xiao,G.He,C.Liu,andG.Shi,“Agilebutsafe: [29] P.Li,H.Li,M.Fan,F.Xu,S.Liao,Y.Ma,Z.Zeng,Z.Wang,Y.Jin,
+Learningcollision-freehigh-speedleggedlocomotion,”2024. Y.Cao,etal.,“TAGA:Terrain-awareactivegazelearningforgeneral-
+[9] C. Kohlbrenner, N. Pudasaini, W. Xie, N. Sivagnanadasan, N. Cor- izableagilehumanoidlocomotion,”arXivpreprintarXiv:2606.05880,
+rell, and A. Roncone, “Egocentric tactile and proximity sensors as 2026.
+observation priors for humanoid collision avoidance,” arXiv preprint [30] Z. Su, B. Zhang, N. Rahmanian, Y. Gao, Q. Liao, C. Regan,
+arXiv:2604.25554,2026. K. Sreenath, and S. S. Sastry, “Hitter: A humanoid table tennis
+[10] A. D. Ames, X. Xu, J. W. Grizzle, and P. Tabuada, “Control barrier robotviahierarchicalplanningandlearning,”2026IEEEInternational
+function based quadratic programs for safety critical systems,” IEEE ConferenceonRoboticsandAutomation(ICRA),2026.
+Transactions on Automatic Control, vol. 62, no. 8, pp. 3861–3876, [31] J.Pratt,J.Carff,S.Drakunov,andA.Goswami,“Capturepoint:Astep
+2016. towardhumanoidpushrecovery,”in20066thIEEE-RASinternational
+[11] L. Yang, B. Werner, M. de Sa, and A. D. Ames, “CBF-RL: Safety conferenceonhumanoidrobots,pp.200–207,Ieee,2006.
+filtering reinforcement learning in training with control barrier func- [32] B. J. Stephens and C. G. Atkeson, “Dynamic balance force control
+tions,”2026IEEEInternationalConferenceonRoboticsandAutoma- for compliant humanoid robots,” in 2010 IEEE/RSJ international
+tion(ICRA),2026. conference on intelligent robots and systems, pp. 1248–1255, IEEE,
+[12] X.B.Peng,P.Abbeel,S.Levine,andM.VandePanne,“Deepmimic: 2010.
+Example-guided deep reinforcement learning of physics-based char- [33] J.-R.Chiu,J.-P.Sleiman,M.Mittal,F.Farshidian,andM.Hutter,“A
+acter skills,” ACM Transactions On Graphics (TOG), vol. 37, no. 4, collision-free mpc for whole-body dynamic locomotion and manipu-
+pp.1–14,2018. lation,”in2022internationalconferenceonroboticsandautomation
+[13] X. B. Peng, Z. Ma, P. Abbeel, S. Levine, and A. Kanazawa, “Amp: (ICRA),pp.4686–4693,IEEE,2022.
+Adversarial motion priors for stylized physics-based character con- [34] B.Sundaralingam,S.K.S.Hari,A.Fishman,C.Garrett,K.VanWyk,
+trol,”ACMTransactionsonGraphics(ToG),vol.40,no.4,pp.1–20, V. Blukis, A. Millane, H. Oleynikova, A. Handa, F. Ramos, et al.,
+2021. “Curobo:Parallelizedcollision-freerobotmotiongeneration,”in2023
+[14] X.B.Peng,Y.Guo,L.Halper,S.Levine,andS.Fidler,“Ase:Large- IEEEInternationalConferenceonRoboticsandAutomation(ICRA),
+scale reusable adversarial skill embeddings for physically simulated pp.8112–8119,IEEE,2023.
+characters,” ACM Transactions On Graphics (TOG), vol. 41, no. 4, [35] Bones Studio, “BONES-SEED: Skeletal everyday embodiment
+pp.1–17,2022. dataset.”https://bones.studio/datasets/seed,2026.
+[15] Y. Mu, Z. Zhang, Y. Shi, D. Yang, M. Matsumoto, K. Imamura, [36] C. Schwarke, M. Mittal, N. Rudin, D. Hoeller, and M. Hutter,
+G. Tevet, C. Guo, M. Taylor, C. Shu, P. Xi, and X. B. Peng, “Smp: “Rsl-rl: A learning library for robotics research,” arXiv preprint
+Reusable score-matching motion priors for physics-based character arXiv:2509.10771,2025.
+control,”ACMTransactionsonGraphics(ProceedingsofSIGGRAPH [37] K. Zakka, Q. Liao, B. Yi, L. L. Lay, K. Sreenath, and P. Abbeel,
+2026),2026. “mjlab:Alightweightframeworkforgpu-acceleratedrobotlearning,”
+[16] Z. Li, X. Cheng, X. B. Peng, P. Abbeel, S. Levine, G. Berseth, arXivpreprintarXiv:2601.22074,2026.
+and K. Sreenath, “Reinforcement learning for robust parameterized [38] ccrpRepo,“AMPmjlab:G1AMPmotioncontrolonmjlab+rslrl.”
+locomotion control of bipedal robots,” in 2021 IEEE International https://github.com/ccrpRepo/AMP_mjlab,2025.
+Conference on Robotics and Automation (ICRA), pp. 2811–2817,
+IEEE,2021.

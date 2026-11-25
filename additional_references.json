@@ -1,0 +1,38 @@
+[
+  {
+    "id": "11_dodgeball", "name": "Humanoid Dodgeball", "year": 2026,
+    "title": "Humanoid Dodgeball: Learning Fast Dynamic Obstacle Avoidance Motions for Humanoids",
+    "url": "https://arxiv.org/abs/2610.40003v1", "pdf": "https://arxiv.org/pdf/2610.40003v1",
+    "venue": "arXiv 2026 · v1", "source": "用户指定 arXiv:2610.40003v1；未核实会议归属",
+    "page_image": "11_arxiv_2610.40003v1-p1", "box": [674, 338, 1070, 806],
+    "kind": "半透明动作叠影",
+    "note": "上下两幅实景分别展示向前迈步和向后跳跃。机器人与球的多个时刻叠在同一画面，透明度制造时间感；首图本身没有复杂模块。",
+    "borrow": "直接参考叠帧做法：固定相机、背景只保留一次、抠出机器人和来袭物。但要额外用 t₀–t₃ 或箭头标明时序，避免多个人影相互遮挡。",
+    "method_image": "11_arxiv_2610.40003v1-p3", "method_box": [108, 117, 1116, 469], "method_page": 3,
+    "method_note": "Figure 2 将动作先验、威胁计算、奖励与部署分区。它是完整方法图；RITE 首图可只借鉴模块分区，不必放训练细节。"
+  },
+  {
+    "id": "12_safefall", "name": "SafeFall", "year": 2025,
+    "title": "SafeFall: Learning Protective Control for Humanoid Robots",
+    "url": "https://arxiv.org/abs/2511.18509", "pdf": "https://arxiv.org/pdf/2511.18509",
+    "venue": "arXiv 2025 · v1", "source": "用户指定链接当前返回 arXiv:2511.18509v1；未核实会议归属",
+    "page_image": "12_arxiv_2511.18509-p1", "box": [106, 422, 1119, 938],
+    "kind": "一条主序列 + 三个子场景",
+    "note": "上方跨整行展示跌落动作序列，下方三个场景展示后倒、跑动中跌倒和侧倒；短语与虚线圈把动作和保护机制对应起来。上行更像连续画面拼接，下方多处使用重叠姿态。",
+    "borrow": "最适合借鉴整体层级：大场景讲完整过程，小场景讲覆盖范围。你们应在主场景保留正常任务和恢复任务，辅场景展示不同任务语境。",
+    "method_image": "12_arxiv_2511.18509-p4", "method_box": [115, 106, 1108, 479], "method_page": 4,
+    "method_note": "Figure 2 右侧 Deployment 用 Fall Predictor 分流至 Nominal Policy 或 Fall Policy。可借鉴少量方框解释干预位置；RITE 应按实际设计画在参考层，并标明恢复。"
+  },
+  {
+    "id": "13_pacman", "name": "PAC-MAN", "year": 2026,
+    "title": "PAC-MAN: Perception-Aware CBF-RL for Whole-Body Safety in Humanoid Dodgeball",
+    "url": "https://arxiv.org/abs/2607.28623v2", "pdf": "https://arxiv.org/pdf/2607.28623v2",
+    "venue": "arXiv 2026 · v2", "source": "用户指定 arXiv:2607.28623v2；未核实会议归属",
+    "page_image": "13_arxiv_2607.28623v2-p1", "box": [624, 313, 1118, 687],
+    "kind": "动作叠影 + 感知信息小窗",
+    "note": "左侧实景叠加机器人和红球的连续位置，右侧竖排 Raw Depth、Segmentation、Policy Observation，直接呈现机器人看到了什么。",
+    "borrow": "借鉴在照片旁用小区域解释关键输入。若视觉不是你们这篇的主要贡献，小窗应优先留给触发、中断和恢复的关系。",
+    "method_image": "13_arxiv_2607.28623v2-p3", "method_box": [106, 101, 1114, 534], "method_page": 3,
+    "method_note": "Figure 2 从机载相机、感知处理到策略执行，另用虚线框标明训练模块。首图保留必要输入和控制接口即可，训练公式适合放到正文方法图。"
+  }
+]

@@ -1,0 +1,691 @@
+PAGE 1
+SafeFall: Learning Protective Control for Humanoid Robots
+Ziyu Meng1,2,∗, Tengyu Liu2,∗, Le Ma2, Yingying Wu2,3, Ran Song1, (cid:0), Wei Zhang1, Siyuan Huang2, (cid:0)
+1 School of Control Science and Engineering, Shandong University 2 National Key Laboratory of General Artificial Intelligence, BIGAI
+3 Department of Automation, Tsinghua University
+https://safefall.github.io
+a. Forward fall off the step
+SafeFall
+Active Force Unloading
+b. Backward fall c. Falling while running d. Lateral fall
+Rope
+Fragile
+Distributed Impact Omnidirectional Adaptability
+Component Protection
+Fig. 1. SafeFall is the first method that protects full-scale humanoid robots from fall damages in the real world. The proposed SafeFall policy
+enables the humanoid to mitigate impact across a variety of scenarios, including (a) falling forward off the step, (b) falling backward, (c) rope-induced
+falls while running in 3 m/s, and (d) lateral falls. By prolonging the impact duration, distributing contact forces, and protecting fragile components, the
+policyachievesadaptiveprotectionagainstcomplex,omnidirectionalcrashes.
+Abstract—Bipedal locomotion makes humanoid robots in- jointactuators.Validatedonafull-scaleUnitreeG1humanoid,
+herently prone to falls, causing catastrophic damage to the SafeFall demonstrated significant performance improve-
+expensive sensors, actuators, and structural components of mentsoverunprotectedfalls.Itreducedpeakcontactforcesby
+full-scale robots. To address this critical barrier to real-world 68.3%, peak joint torques by 78.4%, and eliminated 99.3% of
+deployment,wepresentSafeFall,aframeworkthatlearnsto collisions with vulnerable components. By enabling humanoids
+predictimminent,unavoidablefallsandexecuteprotectivema- tofailsafely,SafeFallprovidesacrucialsafetynetthatallows
+neuverstominimizehardwaredamage.SafeFallisdesigned formoreaggressiveexperimentsandacceleratesthedeployment
+to operate seamlessly alongside existing nominal controller, of these robots in complex, real-world environments.
+ensuringnointerferenceduringnormaloperation.Itcombines
+two synergistic components: a lightweight, GRU-based fall I. INTRODUCTION
+predictor that continuously monitors the robot’s states, and
+a reinforcement learning policy for damage mitigation. The Thedeploymentofhumanoidrobotsinreal-worldenviron-
+protectivepolicyremainsdormantuntilthepredictoridentifies ments promises transformative applications in manufactur-
+a fall as unavoidable, at which point it activates to take
+ing,healthcare,anddisasterresponse.However,theirbipedal
+controlandexecuteadamage-minimizingresponse.Thispolicy
+morphology introduces fundamental stability challenges that
+is trained with a novel, damage-aware reward function that
+goes beyond minimizing external impacts. It explicitly models current control methods cannot fully address. Even state-
+component heterogeneity to shield vulnerable areas like the of-the-art locomotion controllers remain vulnerable to falls
+head,whilesimultaneouslyconstraininginternaljointwrenches caused by unexpected perturbations, perception delays, un-
+to prevent mechanical overload and electrical saturation of
+even terrain, and persistent sim-to-real gap in contact dy-
+5202
+voN
+32
+]OR.sc[
+1v90581.1152:viXra
+
+PAGE 2
+namics. For full-scale humanoid platforms weighing 30-80 boundaries on the fall-to-impact interval and incorporating
+kg, these falls pose a critical barrier to deployment: a single damage models for specific components derived from actual
+uncontrolled fall can destroy expensive sensors, damage robot specifications.
+actuatorsbeyondrepair,andrendertheentiresysteminoper- WevalidateSafeFallthroughextensiveexperimentson
+able. While humans instinctively protect vital organs during a Unitree G1 platform, demonstrating significant reductions
+falls through learned reflexive behaviors, humanoid robots in peak joint torques 78.4%, contact forces 68.3%, and
+currently lack analogous protective mechanisms. A robust complete prevention of sensor damage across diverse fall
+fall protection system that operates transparently alongside scenarios.Real-worldexperimentsconfirmthatourapproach
+nominalcontrollerswouldnotonlypreventcatastrophicdam- seamlesslyintegrateswithexistingnominalcontrollerswhile
+age but also enable researchers to explore more aggressive activating protective behaviors only when necessary, main-
+control strategies without fear of hardware failure. taining a false positive rate below 0.1% and onboard in-
+Prior work on fall mitigation primarily focused on small- ference time below 0.5ms. This non-invasive design may
+scale robots or simulated environments, neither of which fundamentally change the risk profile of humanoid robotics
+translates to modern humanoid systems. Small robots can research, enabling more aggressive experimentation without
+employ strategies like hand cushioning [1], [2], [3] due catastrophic consequences.
+to their favorable strength-to-weight ratios and simplified Our contributions are threefold:
+mechanical designs. However, full-scale humanoids present
+1) We present the first comprehensive fall-mitigation
+unique challenges: their dexterous manipulators contain del-
+framework validated on full-scale humanoid robots in
+icate mechanisms that cannot withstand impact forces, their
+real-world conditions, incorporating platform-specific
+perceptual sensors (e.g. LiDAR, cameras) represent critical
+damagemodelsandstructuralawarenessintothelearn-
+vulnerabilities worth thousands of dollars, and their higher
+ing process.
+kinetic energy during falls demands fundamentally different
+2) We develop a novel training pipeline that transforms
+mitigationstrategies.Moreover,existingapproachestypically
+nominalpolicyfailuresintoarepresentativefalldistri-
+assume falls from static, upright positions, which is an
+bution, enabling robust fall prediction and mitigation
+unrealisticconstraintgiventhatreal-worldfallsemergefrom
+across diverse operational scenarios.
+diverse failure modes during dynamic task execution.
+3) We demonstrate that safe falling behaviors can be
+Developing effective fall mitigation for humanoid robots
+learned through RL despite sparse reward signals by
+presents three interconnected challenges. First, the strategy
+introducing techniques to address the temporal credit
+must exhibit structural awareness, which involves under-
+assignment problem specific to metrics for impact
+standing which body components can safely absorb impact
+events.
+(e.g.reinforcedtorsoshells)versusthoserequiringprotection
+(e.g.sensorarrays,handmechanisms).Second,theapproach II. RELATEDWORKS
+must handle distributional complexity, as real falls originate
+A. Humanoid Robots Safe-falling
+from varied initial conditions including different velocities,
+orientations,andcenter-of-masstrajectoriesthatemergefrom Damagemitigationstrategiesforfull-sizehumanoidrobots
+nominalpolicyfailures.Third,trainingsafefallingbehaviors have received comparatively little attention [4], with most
+through reinforcement learning (RL) faces a fundamental prior work conducted either in simulation or on small-
+temporal credit assignment problem: critical safety signals scale platforms. Early studies predominantly relied on
+like peak impact forces occur only during brief collision model-based motion planning to minimize impact velocity,
+events, while the majority of the falling trajectory provides reducecollisionforces,anddissipateenergyduringfalls[2],
+sparse reward signals, making it difficult to learn which pre- [5], [6], [7], [8], [9]. Other works focused on triggering
+impact actions minimize damage. landing motions that direct impact toward less vulnerable
+We present SafeFall, a generalizable framework that body regions [10], [11]. While effective in structured set-
+enableshumanoidrobotstopredictandrespondtofallswith tings,thesemethodsgenerallydependonsimplifieddynamic
+damage-minimizing behaviors, seamlessly integrating with models and accurate physical parameters, limiting their ro-
+existing nominal controllers by monitoring continuously but bustness in unstructured or uncertain environments.
+intervening only when a fall is unavoidable. Our approach More recently, RL has been applied to safe-fall control,
+drawsinspirationfromhumanreflexiveresponses,extending enabling policies that optimize for criteria such as minimiz-
+impactdurationthroughcontrolledrolling,protectingvulner- ing impact impulses and protecting hardware components.
+ableareas,andmaintainingpost-impactstability.Theframe- Human fall demonstrations provide instructive insights, but
+work comprises two synergistic components: (1) a GRU- the fundamental morphological and dynamical discrepancies
+based lightweight fall predictor trained on diverse failure between humans and robots limit the direct transferability
+scenarios that identifies irrecoverable states with minimal of these strategies[12], [1], [13], [14]. While concurrent
+false positives, and (2) an RL policy that executes protec- work [15] considers component sensitivity on a small-scale
+tive maneuvers prioritizing structural integrity. Critically, we platform, it critically omits damage to actuators like joint
+introduce a novel training methodology that addresses the motor. These approaches have demonstrated the potential
+temporal credit assignment challenge by focusing episode for adaptive behavior; however, most have been tested on
+
+PAGE 3
+simplified robot morphologies or constrained to specific A. Preliminaries
+falling directions, reducing their applicability to full-scale
+Partially Observable Fall Mitigation We formulate hu-
+humanoidsindiversereal-worldscenarios.Themainreasons
+manoid fall mitigation as a Partially Observable Markov
+aretwofold.First,theyoftenlearnalimitednumberoffixed
+DecisionProcess⟨S,A,T,O,R,γ⟩,wherethechallengelies
+optimalmotionsequencesonarestrictedsetofinitialconfig-
+in learning protective behaviors from incomplete sensory
+urations. Such rigid strategies struggle to generalize across
+information during the short critical window between fall
+thewidevarietyoffallsituationsthatmayoccur,particularly
+onset and ground impact.
+when transitioning abruptly from nominal control policies.
+The observation space O contains only onboard sensor
+Second, these approaches typically neglect the differences
+measurements: IMU readings and joint encoder measure-
+in load bearing capacity, structural fragility, and material
+ments.Cruciallyabsentareglobalrootpositionandvelocity,
+strength across different robot components. In contrast, our
+force measurements (both internal and external), which is
+proposed SafeFall is explicitly designed to address these
+information readily available in simulation but inaccessible
+gaps.Itaccommodatesabroadrangeofinitialconfigurations, during deployment. The action space A ⊂ R29 specifies
+includingdivergenttrajectoriesfromfailednominalpolicies.
+target joint positions for the robot’s PD controllers, bounded
+Furthermore, we adopt joint-level physical constraints based
+by the robot’s joint position and velocity limits. T(s′|s,a)
+on actuator mechanical and electrical limits. By integrating
+describes state transitions, and γ ∈ (0,1] is the discount
+these robot-specific constraints into the learning process,
+factor. The goal is to learn a policy π(a|o) that maximizes
+achievingmorerobustand adaptablefalldamagemitigation.
+expected discounted returns while operating only on partial
+B. Fall Prediction observations o∈O.
+The reward function R(s,a) must balance competing
+Humanoidstabilityandfalldynamicsarecriticalissuesin
+objectives:minimizingpeakimpactforceswhilemaintaining
+legged robotics, as they directly influence safety, hardware
+feasible joint configurations, protecting vulnerable compo-
+longevity,andoverallperformance.Advancesinthisdomain
+nents while utilizing robust body regions for energy absorp-
+have enabled timely fall prediction, which is essential for
+tion, and achieving stable behaviors during impact while
+mitigatingdamageandfacilitatingrapidrecovery.Threshold-
+avoiding unnecessary motion. We detail this multi-objective
+basedapproacheswereamongtheearliestsolutions,compar-
+formulation in Section III-D.
+ingsensorreadingssuchasinertialmeasurementunit(IMU)
+data [16], [17] to preset limits. While simple to implement,
+B. Data Collection
+they rely on manual calibration and capture only narrow as-
+Training robust fall prediction requires diverse failure
+pects of balance. Model-based methods improved generality
+trajectories that capture the transition from stable operation
+through principled criteria such as the Zero Moment Point
+to irrecoverable falls. Since falls vary significantly across
+(ZMP)[18],whichrequireaccuratedynamicmodelsbutcan
+different robot tasks, we focus on omnidirectional locomo-
+besensitivetoparametererrorsandunmodeleddisturbances.
+tionasourprimarydomain,usingatrainedvelocity-tracking
+Learning-basedstrategies[19],[20],[21]leveragerich,multi-
+controller as the nominal policy from which we induce
+modalinputsfromIMUs,jointencoders,andvisionsensors.
+failure behaviors.
+Supportingthistrend,Urbannetal.[22]releasedalarge-scale
+We identify 6 primary failure factors from hardware ex-
+dataset to accelerate data-driven fall prediction
+periments (Table I) and systematically reproduce them in
+Severalexistingworksdetectimminentinstabilityandthen
+simulation. These factors rarely occur in isolation since real
+trigger independent recovery controllers [20], [21], rarely
+falls typically result from multiple simultaneous failures,
+addressing early prediction of unavoidable falls or tightly
+such as sensor drift combined with external forces or foot
+couplingpredictionwithcontrol.Ourapproachdistinguishes
+slippage during control delays.
+itselffromexistingmethodsbyintegratingpredictionandfall
+control,enablingearlyrecognitionofunavoidablefalls.This To generate realistic failure scenarios, we apply targeted
+integration ensures seamless coordination between detection perturbations during locomotion (Table I), with each trajec-
+andresponse,enablingfasterandmoreeffectivefalldamage torycombining1-3factorsbasedonempiricallyobservedco-
+mitigation, while the automatic labeling pipeline to avoid occurrence frequencies. This protocol yields 81,920 trajec-
+manual annotation cost. tories, each containing both recovery attempts from unstable
+postures and eventual falls. We allocate 65,536 sequences
+III. METHOD for training and 16,384 for validation. This dataset serves
+We present SafeFall, a framework that addresses the the training of both the fall predictor (Section III-C) and the
+dual challenge of predicting and mitigating fall damage fall damage mitigation policy (Section III-D).
+in humanoid robots. Our approach integrates two synergis-
+C. Fall Predictor
+tic components: a lightweight fall predictor that identifies
+irrecoverable states with minimal computational overhead, We implement the fall predictor as a lightweight GRU
+and an RL-based protection policy that executes behaviors network [23] that processes proprioceptive observations to
+minimizing damage upon fall detection. Fig. 2 illustrates the classifystatesassafeorfalling.Thesingle-layerarchitecture
+system architecture and training pipeline. with 64 hidden units balances detection accuracy with the
+
+PAGE 4
+a. Data Collection b. Fall Predictor Training Fall Predictor d. Deployment
+traj �1 �2 GRU ��ℎ− 푑1푑푒 
+label Positive Mask Negative
+Safe or Falling
+c. Fall Policy Training
+traj 1 Safe Ambiguous Falling Safe Falli ng Fall Predictor Fall Predictor
+traj 2 T
+traj 3 Stage II ��Fall Policy Nominal Safe
+... ... ... ... Predicted Policy Falling
+motion trajectories Fall Sates Simulator Actor
+privileged Fall Policy
+Stage I ��:�+5
+Random �� 푝 : 푒 �+ 푟푐 5 푒푝�    concat Critic
+Rollout with disturbance Simulator States
+Fragile Component Protection
+Force Distribution
+Nominal Policy
+Fig.2. OverviewofSafeFall.(a)Wefirstcollectdiversefallingtrajectoriesbyrollingoutthenominallocomotionpolicyunderdisturbances;(b)The
+trajectoriesaretemporallysegmentedintosafe,ambiguous,andfallingphasestotrainaGRU-basedfallpredictorthatidentifiesearlysignsofinstability;
+(c) The SafeFall policy is trained using a series of damage-mitigation rewards to safeguard joint motors and other fragile components. To enhance
+robustness,trainingproceedsfromrandominitialstatestoprogressivelyrealisticandchallengingfallingstates;(d)Duringdeployment,thefallpredictor
+operatesalongsidethenominalpolicy,adaptivelyswitchingcontroltothefallpolicyupondetectinganimpendingfallforeffectiveprotection.
+TABLEI
+TECHNICALCAUSESOFHUMANOIDFALLSANDOURSIMULATIONSTRATEGYTOINDUCEAFALL
+FailureFactors Description SimulationMethodtoInduceaFall
+SensorNoise Noise or bias in sensors causing state esti- Add uniform noise to the policy observations with a magnitude 2-10×
+mationerrors. greaterthanthetrainingconfiguration.
+ExternalForce Unexpected forces disturb momentum and Apply a velocity perturbation to the torso, where the perturbation
+balance. in the forward/backward direction (x-axis) is uniformly sampled from
+[−2,2]m/s,andthelateraldirection(y-axis)from[−1,1]m/s.
+FootSlip Lowfrictionleadstosupportfootslippage. Apply a 1 m/s horizontal velocity perturbation in a random direction to
+thestancefoot.
+FootTrip Swingfoothitsobstaclesorirregularterrain. Use unseen terrain heightfields and obstacles with heights ranging from
+[0,15]cm.
+SystemDelay Latency in sensing, control, or actuation Introduce a random delay uniformly sampled from [0,200] ms in the
+degradesstability. observation-to-actionloop.
+DynamicMismatch Robotdynamicsdifferfromcontrolortrain- Randomizephysicalparametersbysamplingjointstiffnessanddamping
+ingmodel. from [0.2,3]× nominal values and applying a 0.1 m horizontal CoM
+offsettoarandomdirection
+computationalconstraintsofreal-timedeployment,achieving ing prediction lead time.
+inference time under 0.5 ms. For each trajectory of length T where T is the time
+The predictor operates on the state vector s = of ground impact, we define boundaries t = 2T and
+t 1 3
+{r ,ω ,q ,q˙ }, where r denotes pelvis roll and pitch angles t = T −100 ms, creating three segments: safe states D
+t t t t t 2 1
+in the world frame, ω represents base angular velocity, for t ≤ t , ambiguous states D for t < t ≤ t , and
+t 1 u 1 2
+and q ,q˙ are the angular positions and velocities of each falling states D for t > t . The safe segment intentionally
+t t 2 2
+joint relative to the default standing pose. These quantities includes recoverable instabilities to prevent false alarms
+are directly measurable through onboard IMU and joint during aggressive but controlled maneuvers. The 100 ms
+encoders, eliminating dependency on external sensing or falling window represents the minimum reliable detection
+state estimation. The GRU processes states sequentially, horizon before impact.
+maintaining temporal context through its hidden state, while We train the fall predictor using a negative log-likelihood
+a linear output layer produces binary fall/no-fall predictions. loss with the ambiguous segment D masked out from
+u
+Training the predictor faces a key challenge: determining gradient computation, preventing the model from learning
+when a robot transitions from recoverable imbalance to in- uncertain labels.
+evitable falling. This transition is gradual, not instantaneous,
+D. SafeFall Policy
+and depends on the robot’s complex dynamics and initial
+conditions. We resolve this through conservative temporal Upondetectinganirrecoverablefall,thesystemtransitions
+segmentationthatcreatescleartraininglabelswhilepreserv- from the nominal controller to a specialized mitigation
+
+PAGE 5
+thatarepreciselyarticulatedintherealworld.Theseoverlaps
+lead the physics solver to compute enormous, non-physical
+Camera
+LiDAR anomalous contact forces, distorting the collision reward
+signal. We posit that the essential nature of the physical
+contact force Shell interaction between adjacent links is a manifestation of joint
+joint torque
+internal constrains. Consequently, we exclude contact forces
+between adjacent links and instead rely on the joint reaction
+Dextrous
+hand force to quantify these internal constrains. These reaction
+joint reaction force
+Floor forces properly model the physical response when adjacent
+Joint links undergo structural collisions or bear destructive stress.
+Motor
+Moreover, joint torque penalty serve to constrain motor
+efforts, preventing them from exceeding the electrical per-
+formance of actuators.
+Consequently,wemodelimpactsafetythroughthreecom-
+Fig. 3. Illustration of critical components in a humanoid robot. The
+perceptionmodulesanddexterousmanipulatorsaresusceptibletophysical plementary terms:
+impact.Incontrast,thearms,legs,andtorsoshellactasprotectivestructures,
+attenuating external impacts, preserving structural integrity, and shielding r =w ·r +w ·r +w ·r . (2)
+impact c contact j joint e torque
+theembeddedelectronics.Ontheleft,wevisualizethedifferencebetween
+contactforce,jointtorque,andjointreactionforce. The primary contact force penalty accounts for compo-
+nent heterogeneity by assigning sensitivity weights w ∈
+s,i
+1000,1,0.5 to high (e.g. head, hands), medium (e.g. shanks,
+policy trained to minimize impact damage. We learn this
+shoulders), and low (e.g. torso, thighs, elbows) vulnerability
+policy using PPO [24] with a reward function that explicitly
+regionsbasedonreplacementcostsandfunctionalcriticality:
+modelscomponentvulnerabilityalongsidemotormechanical
+and electrical constraints. To address the temporal credit 1 (cid:88) L (cid:13) (cid:13)
+r = (cid:13)I{c }w [f −m g] (cid:13)
+assignment problem inherent in sparse impact signals, we contact N (cid:13) i s,i contact,i i +(cid:13) 2
+restrict training to a fixed, short episode length the detection i=1
+(cid:13) (cid:13)
+of an unavoidable fall to the completion of ground impact. +α· max (cid:13)I{c }w [f −m g] (cid:13)
+(cid:13) i s,i contact,i i +(cid:13)
+i∈{1,...,L} 2
+Two-Stage Curriculum Learning We employ a cur-
+(3)
+riculum approach to balance computational efficiency with
+physical realism. Stage I uses simplified collision geometry where I{c } = 1 if link i is in contact and 0 otherwise,
+i
+and basic initial configuration to rapidly explore fall strate- f is the contact force magnitude on link i, m g rep-
+contact,i i
+gies, while stage II refines the policy using full collision resents gravitational loading (subtracted to isolate dynamic
+modelsandinitializestrainingfromrealisticfallingstates.To contact force), [x] = max(x,0) ensures non-negativity,
++
+ensurerobustfallmitigationacrossdiversefailuremodes,we N = (cid:80)L Ic counts active contacts to encourage force
+i=1 i
+employdifferentinitializationstrategyintwostages.InStage distribution, and α=0.3 balances average and peak forces.
+I, we generate stochastic falling configurations by placing As mentioned above, anomalous contact forces arising from
+the robot in random poses slightly deviating from its default spurious collisions between adjacent links due to imprecise
+pose and random orientations slightly above the ground. collision models are also filtered.
+In Stage II, we sample states from our collected dataset The joint reaction force penalty protects mechanical con-
+that the fall predictor classifies as unsafe. We introduce this nections from excessive loads:
+second sampling method only in Stage II to progressively
+i i n nv c a re li a d se co t n r fi ai g n u in ra g tio d n i s ffi i c n u c l l t u y d . in I g n g b ro o u th nd st p a e g n e e s t , ra k ti i o n n em an a d tic s a e l l l f y - r joint = (cid:88) J (cid:13) (cid:13)f joint,i −f j t o h i r n e t s , h i (cid:13) (cid:13) 2 (4)
+collision are filtered. i=1
+Damage-Aware Reward The reward function balances wheref joint,i representsjointreactionforcescomputedbythe
+two objectives: minimizing collision impact loads that could physics solver to maintain joint kinematics during impacts.
+damage hardware, and maintaining stable, efficient motions Theseforcesreflectmechanicalloadstransmittedthroughthe
+during the fall. We formulate the total reward as kinematicchain,astheyarisewhenjointsexperiencereaction
+forcestomaintaintheirprescribeddegreesoffreedomduring
+r total =r impact +r regulation (1) groundimpactpropagation.Thethresholdfthresh corresponds
+i
+to each joint’s mechanical load capacity determined from
+where r captures physical damage risks and r
+impact regulation
+hardware specifications.
+ensures motion quality.
+The torque penalty prevents actuator saturation and me-
+We adopt a decoupled approach to separately measur-
+chanical stress:
+ing collisions between adjacent links from those between
+non-adjacent links and with the ground. When employing (cid:13) (cid:13)
+full collision models, geometric limitations of the collision r = (cid:88) J (cid:13) (cid:13) (cid:20) τ i −1 (cid:21) (cid:13) (cid:13) , (5)
+meshes often cause minor overlaps between adjacent links torque i=1 (cid:13) (cid:13) τ¯ i + (cid:13) (cid:13) 2
+
+PAGE 6
+whereτ representsexternaltorquesonjointifromconstraint
+i
+reactions and external loads (excluding motor output), and
+τ¯ is the actuator’s maximum rated torque. This ensures
+i
+the policy maintains control authority during impacts while
+avoiding damaging torque spikes.
+Additional regularization terms r penalize exces-
+regulation
+sivejointpositions,velocities,accelerations,andactionrates.
+Beyond promoting smooth motions and suppressing oscilla-
+tory behaviors that frequently emerge during ground contact
+transitions, these regularization terms also play a critical Fig.4. Robotfallingindifferentdirections.Top:Lateralfall.Therobot
+role in reducing collision related artifacts by discouraging rotates its upper body to land on its high priority rigid torso, orienting its
+camera-equippedheadupwardwhileusingitsarmsforauxiliarycushioning.
+jointlimitstrikesandabruptaccelerations.Collectively,these
+Bottom: Forward fall. The robot extends its arms to brace for impact,
+terms constrain undesirable collision behaviors, as well as absorbingenergyandprotectingitsheadfromdirectimpact.
+improving both simulation stability and hardware transfer-
+ability.
+for5epochs.Weuseabatchsizeof4096.Thetrainingtakes
+Asymmetric Actor-Critic The actor network observes
+only about 5 minutes on a single RTX 4090 GPU.
+only deployable sensor measurements: pelvis orientation
+For the SafeFall policy, we use a fixed episode length
+(r,p), joint states (q,q˙), previous actions a , angular
+t−1
+of 40. Both the Actor and the Critic are implemented as a
+velocityω,andprojectedgravityg ,stackedover5timesteps
+b
+3-layerMLP.ThepolicyistrainedusingtheAdamoptimizer
+for temporal context. The critic additionally accesses privi-
+with an initial learning rate of 10−3 along with an adaptive
+leged simulation state including global root positions, ve-
+learning rate scheduling scheme. Training SafeFall takes
+locities and center-of-mass, enabling more effective value
+128 GPU hours for Stage I and 152 GPU hours for Stage
+estimation during training. This asymmetric design [25]
+II, amounting to a total of 280 GPU hours. A propor-
+maintains deployment feasibility while exploiting rich su-
+tional–derivative (PD) controller operates at 200Hz in both
+pervision.
+simulationandonthereal-worldhumanoidplatform.Inreal-
+Domain Randomization To facilitate robust sim-to-real
+world deployment, both the predictor and the SafeFall
+transfer, we employ domain randomization during training,
+policy runs at 50Hz.
+perturbing both observations and physical parameters to
+improve the policy’s resilience to real-world dynamics. We IV. EXPERIMENTS
+detail the noise and randomization parameters in Table II.
+We evaluate our fall protection system through three key
+research questions:
+TABLEII
+RQ1: Does the fall predictor achieve sufficient specificity
+DOMAINRANDOMIZATIONANDOBSERVATIONNOISECONFIGURATIONS
+to avoid false triggers while providing adequate warning
+USEDDURINGTRAINING.
+time?
+Term Value RQ2: How effectively does our damage-aware policy
+DomainRandomization reduce impact forces compared to baseline strategies?
+Friction U(0.3,1.0) RQ3: Can the learned mitigation policy generalize to
+Restitution U(0.0,0.5) different locomotion controllers?
+Basemassoffset(kg) U(−1.0,3.0)
+A. Evaluation of Fall Predictor
+BaseCoMoffset(m) x,y∼U(−0.05,0.05),
+z∼U(−0.01,0.01) We evaluate predictor reliability using False Alarm Rate
+Jointstiffnessscale logU(0.7,1.5) (FAR), the fraction of stable states misclassified as falling,
+Jointdampingscale logU(0.5,3.0) and Lead Time (LT), the interval between first detection and
+Jointpositionlimits N(0,0.02) ground impact. Table III compares our GRU-based predictor
+ObservationNoise against a 5-frame sliding-window MLP baseline and GRU-
+Rootquat(–) U(−0.05,0.05) based predictors with different training data segmentation
+Jointpos(rad) U(−0.01,0.01) boundaries t 2 .
+Jointvel(rad/s) U(−1.5,1.5) The GRU-based predictor with t 2 =T −100 ms achieves
+Baseangvel(rad/s) U(−0.2,0.2) afavorablebalancebetweendetectionaccuracyandresponse
+Projectedgravity(–) U(−0.05,0.05) time, maintaining FAR well below 0.1% while providing
+410msleadtime.Theresultssuggestthattemporalmodeling
+provides meaningful advantages in fall detection scenarios.
+E. Training and Implementation Details
+While the MLP’s sliding-window approach captures local
+OurexperimentsareconductedonaUnitreeG1humanoid temporal patterns through frame concatenation, the GRU’s
+robot [26] with 29 degrees-of-freedom (DoF). recurrent architecture offers better discrimination between
+We train the fall prediction model using the Adam opti- transient instabilities during aggressive maneuvers and gen-
+mizerwithalearningrateof10−3 andweightdecayof10−4 uine balance loss events.
+
+PAGE 7
+Interestingly, a larger t value significantly increases the
+2
+leadtimeatminimalFARcost(0.06%to0.16%),suggesting
+that the predictor can learn discriminative features even
+with relaxed thresholds. This enables application specific
+tuning, with conservative settings for environments where
+false triggers are costly, versus aggressive detection where
+hardware protection is paramount.
+Furthermore,maskingouttheuncertainregionbetweent
+1
+and t during training significantly improves the FAR and Fig.5. Improvementinmaximumcontactforce(left)andmaxjointforce
+2
+the lead time across both architectures, suggesting the value (right) achieved by SafeFall compared to the damping mode when the
+robotfallsatvariousrollandpitchangles.SafeFallachievessignificant
+ofthistechniqueinadditiontothechosentemporalmodeling
+improvementinmostfallscenarios,highlightingitsrobustperformancein
+approach. omnidirectionalfalls.
+TABLEIII
+ABLATIONOFFALLPREDICTORDESIGNCHOICES • Nominal Policy: Continuing the nominal locomotion
+policy through impact.
+Method↑ FAR↓ LT(s)↑ • Default Pose: Maintaining upright standing posture
+withoutmaskedDu with arms and legs held closely to the body.
+Baseline(t1=t2=T −0.2s) 0.71% 0.24 • Damping Mode: Switching to damping mode (K p =
+FallPredictor(t1=t2=T −0.2s) 0.35% 0.18 10e−5 (≈ 0),K = 10) upon fall detection, with
+FallPredictor(t1=t2= 2
+3
+T) 4.1% 1.22
+constant target po
+d
+sition and zero target velocity.
+maskedDu
+Baseline(t1= 2
+3
+T,t2=T −0.2s) 0.09% 0.44 We evaluated SafeFallon over 5,000 falling scenarios,
+FallPredictor(t1= 2
+3
+T,t2=T −0.1s) 0.04% 0.29 initialized with diverse fall postures and velocities span-
+FallPredictor(t1= 2 3 T,t2=T −0.2s) 0.06% 0.41 ning [0,4] m/s. These scenarios were generated follow-
+FallPredictor(t1= 2
+3
+T,t2=T −0.4s) 0.16% 0.70 ing the same initialization protocol from Stage II training,
+ensuring they represent realistic failure modes. Table IV
+B. Damage Mitigation
+demonstrates substantial safety improvements in terms of
+We quantitatively assess the effectiveness of our approach all metrics. Compared to the nominal policy, our method
+inmitigatingfall-induceddamageinsimulation.Theadopted reduces peak joint torque, joint reaction force, and contact
+metrics are as follows, where each metric reports the peak force by 78.4%, 66.8%, and 68.3%, respectively, indicating
+magnitude observed during a single trial. To simplify nota- significantly lower structural damage risk. The relatively
+tion, we omit the superscript max in the remainder of this large standard deviation arises from the influence of the
+section. initial conditions (e.g. height, posture and velocity) on the
+• Max Joint Torque τ: Maximum joint torque over all resulting impact dynamics. Protected region contacts drop
+joints. This metric captures the peak rotational loads from56-99%inbaselinestolessthan1%withourapproach,
+experienced by the actuators effectively safeguarding vulnerable components. The lowest
+• Max Joint Reaction Force f joint : Maximum joint reac- cumulative impulse confirms smoother energy dissipation
+tionforcemagnitudeoveralljoints.Jointreactionforces throughcontrolledprotectivemotions.WenotethattheMax
+aretheinternalconstraintforcesrequiredtomaintainthe Joint Torque Ratio exceeds 1.0 (specifically 2.47) during
+kinematic connection between adjacent links, thereby impact. This remains within the physical safety margins
+reflecting the destructive stress acting on the joints. of the actuators [27]. Joint actuators are typically designed
+• MaxContactForcef contact :Peakcontactforcebetween to withstand transient peak torques higher (often 3–5×)
+body links and ground during impact. than their rated continuous torque, particularly during short-
+• Whole-Body Impulse J: The maximum ground re- duration events such as ground impact.
+action impulse exerted on the robot within a single Fig. 5 analyzes directional robustness by evaluating falls
+simulation time step. This metric captures the most across the full range of roll and pitch orientations. Our
+severe instantaneous impact spike.. method consistently outperforms the best baseline (damp-
+• Illegal Contact N illegal : The number of collisions on ing mode) across all directions, with particularly large im-
+protected regions (e.g., the head or dexterous hands). provements for lateral and forward falls where uncontrolled
+• JointLimitViolationsN limit :Themaximumnumberof impacts typically concentrate on vulnerable regions. This
+joints violating their joint position limits at any single omnidirectional effectiveness answers RQ2 affirmatively.
+time step. Qualitative examples of the learned damage-mitigation
+• Max Joint Torque Ratio R torque : The maximum ratio behaviorsforforwardandlateralfallsarevisualizedinFig.4.
+of the torque experienced by any articulated joint to its Notably, in most cases, the robot retracts its legs to actively
+maximum designed torque capacity, evaluated over all loweritspelvis.Thisactionensuresthatthelowerbodycon-
+joints. tactsthegroundfirst,preventingtheupperbody,particularly
+We compare against three baselines: the head, from becoming the primary point of impact. We
+
+PAGE 8
+TABLEIV
+QUALITATIVEEVALUATIONSOFSAFEFALLREVEALCONSISTENTANDSIGNIFICANTIMPROVEMENTOVERBASELINEMETHODS
+Method τ(N·m)↓ f joint(N)↓ fcontact(N)↓ J (N·s)↓ N illegal ↓ N limit ↓ Rtorque ↓
+NominalPolicy 613±401 4096±3058 4036±2542 426 99% 3.2 12.45
+DefaultPose 402±384 3064±2744 3132±2383 260.1 82% 0.21 6.44
+DampingMode 304±241 2844±2482 3138±2575 220.4 56% 0.96 5.73
+Ours(StageI) 295±240 2360±1908 2768±2113 370 43% 0.57 7.09
+Ours(StageI&II) 132±76 1361±1351 1279±1008 180.7 0.7% 0.003 2.47
+alongsidechallengingscenariossuchasmissteppingoffa30
+cm platform and tripping during 3 m/s high-speed running.
+Figs. 1 and 6 and the accompanying video demonstrate
+thatSafeFallachievesclearfalldamagemitigationbehav-
+iors across these crash scenarios. Notably, the robot learned
+to utilize its elbows to brace against the ground, effec-
+tively distributing impact loads. Simultaneously, the policy
+exhibited delicate wrist reorientation maneuvers to actively
+Fig. 6. SafeFall mitigating damages from a fall. We observe clear avoid ground contact by flipping the hands upward. These
+protectivemotionsinwhichtherobotrotatesandextendsitsarmtoabsorb
+learned behaviors effectively shielded critical components
+energyandshielditsheadandhandsfromheavyimpact.
+from direct impact.
+To quantify impact reduction, we measured peak impulse
+also observed that the policy exploits the unique kinematics over100msduringthefallusingahigh-speedmotioncapture
+of the robot to execute non-anthropomorphic behaviors that system. Our method achieved 286.1 N·s peak impulse—a
+are impossible for humans, such as 180 degree waist yaw 22.1% reduction compared to the damping baseline’s 367.1
+rotation. This highlights that the learned policy is driven by N·s. This dramatic decrease matches our simulated experi-
+the intrinsic hardware characteristics of robot, rather than ments and validates our approach’s protective capabilities.
+being constrained by an anthropomorphic perspective. Additionally, the system demonstrated perfect specificity:
+the predictor exhibited zero false positives during controlled
+C. Generalization push experiments, correctly distinguishing recoverable dis-
+turbances from impacts that induce falls. Gentle pushes
+To evaluate generalization across nominal policies (RQ3),
+that allowed natural recovery did not trigger protection
+wedeployourfallmitigationpolicyonastylizedlocomotion
+mechanism, while strong disturbance reliably activated the
+controller [28] with significantly different gait patterns from
+mitigation response.
+the training distribution. While the fall predictor requires
+retraining due to altered motion signatures, the mitigation
+V. CONCLUSIONANDLIMITATIONS
+policy transfers directly without fine-tuning. Table V shows
+WepresentedSafeFall,aframeworkforfallprediction
+significant damage reduction (48.9% max joint force de-
+and damage mitigation in full-scale humanoid robots. Our
+crease and 50.0% max contact force decrease) despite the
+system combines a lightweight GRU-based fall predictor
+distributionshift,confirmingthattrainingondiversefalltra-
+achieving0.06%falsealarmrateswithanRLpolicythatre-
+jectories enables robust generalization to unseen locomotion
+ducespeakcontactforcesby68.3%,jointtorquesby78.4%,
+policies.
+and joint reaction forces by 66.8% compared to unprotected
+TABLEV falls. The framework eliminates 99.3% of collisions with
+SAFEFALLGENERALIZESTOANUNSEENNOMINALPOLICY vulnerablecomponentssuchassensorsanddexteroushands.
+Critically, SafeFall operates alongside existing control
+Method f j m oi a n x t (N)↓ f c m on ax tact (N) systems with minimal computational overhead. During nor-
+DampingMode 4780 5287 mal operation, only the predictor runs, continuously mon-
+Ours 2444 2644 itoring for irrecoverable states without interfering with the
+Improvement −48.9% −50.0%
+nominalcontroller.Theprotectivepolicyactivatesonlywhen
+afallbecomesinevitable,replacingthenominalcontrollerto
+execute damage-minimizing behaviors. This design ensures
+D. Real-world Experiments
+zero performance degradation during standard operation
+We conducted real-world experiments on a Unitree G1 while providing crucial protection when needed.
+robot to validate SafeFall’s effectiveness on physical Toourknowledge,thisworkrepresentsthefirstfallprotec-
+hardware through a comprehensive suite of perturbation ex- tion framework validated on full-scale humanoid platforms
+periments.Thissuiteincludesexternalpushesfromdifferent in real-world experiments. The proposed framework may
+directions (forward, backward, and lateral) during walking, fundamentally change the risk profile of humanoid robotics
+
+PAGE 9
+research: researchers can experiment with more aggressive [8] R.Subburaman,N.G.Tsagarakis,andJ.Lee,“Onlinerollingmotion
+controlstrategiesandpushperformanceboundaries,knowing generation for humanoid falls based on active energy control con-
+cepts,” in IEEE-RAS International Conference on Humanoid Robots
+that inevitable failures will not result in catastrophic hard-
+(Humanoids),2018.
+ware damage. This safety net reduces both repair costs and [9] S.WangandK.Hauser,“Real-timestabilizationofafallinghumanoid
+development downtime, accelerating the iteration cycle for robotusinghandcontact:Anoptimalcontrolapproach,”inIEEE-RAS
+InternationalConferenceonHumanoidRobotics(Humanoids),2017.
+novel control approaches.
+[10] K. Fujiwara, F. Kanehiro, S. Kajita, K. Kaneko, K. Yokoi, and
+While we validated SafeFall on the Unitree G1 plat- H. Hirukawa, “Ukemi: Falling motion control to minimize damage
+formperforminglocomotiontasks,thetrainingmethodology, to biped humanoid robot,” in IEEE/RSJ International Conference on
+IntelligentRobotsandSystems(IROS),2002.
+including automated fall data generation and component-
+[11] Fall on Backpack: Damage Minimizing Humanoid Fall on Targeted
+specificdamagemodeling,canbeappliedtootherhumanoid Body Segment Using Momentum Control, ser. International Design
+platforms and tasks. The framework requires only proprio- EngineeringTechnicalConferencesandComputersandInformationin
+EngineeringConference,vol.Volume4:8thInternationalConference
+ceptivesensingandknowledgeofcomponentvulnerabilities,
+onMultibodySystems,NonlinearDynamics,andControl,PartsAand
+making it compatible with existing humanoid systems. B,082011.
+LimitationsandFutureWorkOurapproachhastwopri- [12] J. Ruiz-del Solar, R. Palma-Amestoy, R. Marchant, I. Parra-
+Tsunekawa, and P. Zegers, “Learning to fall: Designing low damage
+marylimitations.First,trainingconvergencerequiresapprox-
+fallsequencesforhumanoidsoccerrobots,”RoboticsandAutonomous
+imately 280 GPU hours due to the sparse reward structure Systems,2009.
+inherent in impact-based optimization. The critical learning [13] V.C.Kumar,S.Ha,andC.K.Liu,“Learningaunifiedcontrolpolicy
+forsafefalling,”inIEEE/RSJInternationalConferenceonIntelligent
+signals occur only during brief collision events, while the
+RobotsandSystems(IROS),2017.
+majority of the falling trajectory provides minimal gradient [14] G. Buzzetti, D. Zappetti, and G. Iacca, “A reinforcement learning
+information. This computational cost affects only the initial method to minimize the damage on a falling ballbot,” in European
+RoboticsForum,2024.
+training phase, not deployment. Moreover, the trained fall
+[15] P. Strauch, D. Mu¨ller, S. Christen, A. Serifi, R. Grandia, E. Knoop,
+policy is generalizable to different nominal policies. and M. Ba¨cher, “Robot crash course: Learning soft and stylized
+Second, the current system operates reliably only on flat falling,”2025.[Online].Available:https://arxiv.org/abs/2511.10635
+[16] J. Ruiz-del Solar, J. Moya, and I. Parra-Tsunekawa, “Fall detection
+or near-flat terrain. Stairs, ledges, and significantly uneven
+and management in biped humanoid robots,” in IEEE International
+surfaces present fundamentally different fall dynamics that ConferenceonRoboticsandAutomation(ICRA),2010.
+our policy cannot adequately address. These terrain features [17] D.H.Tran,F.Hamker,andJ.Nassour,“Ahumanoidrobotlearnsto
+recoverperturbationduringswingingmotion,”IEEETransactionson
+poseparticularchallengesastheyoftencausethemostsevere
+Systems, Man, and Cybernetics: Systems, vol. 50, no. 10, pp. 3701–
+damage in real-world deployments. Extending SafeFall 3712,2020.
+to handle complex terrain requires visual perception to [18] K. Ogata, K. Terada, and Y. Kuniyoshi, “Real-time selection and
+generation of fall damage reduction actions for humanoid robots,”
+identify geometric hazards and adapt protective strategies
+in IEEE-RAS International Conference on Humanoid Robots (Hu-
+accordingly.Thisrepresentsanimportantdirectionforfuture manoids),2008.
+research, as vision-based fall mitigation would enable safe [19] D. Liu, H. Jeong, A. Wei, and V. Kapila, “Bidirectional lstm-based
+networkforfallpredictioninahumanoid,”in2020IEEEInternational
+operation in the diverse environments where humanoids are
+SymposiumonSafety,Security,andRescueRobotics(SSRR),2020.
+intended to operate. [20] M.E.Mungai,G.Prabhakaran,andJ.W.Grizzle,“Fallpredictionfor
+Despite these limitations, SafeFall provides a practical bipedalrobots:Thestandingphase,”inIEEEInternationalConference
+onRoboticsandAutomation(ICRA),2024.
+solutionforreducingfall-relateddamageinhumanoidrobots,
+[21] G. Prabhakaran, J. W. Grizzle, and M. E. Mungai, “Standing
+contributing to their deployment in real-world applications tall: Robust fall prediction for bipedal robots,” arXiv preprint
+where falls are inevitable but must not be catastrophic. arXiv:2506.01141,2025.
+[22] O.Urbann,J.Eßer,D.Kleingarn,A.Moos,D.Bra¨mer,P.Bro¨mmel,
+REFERENCES N. Bach, C. Jestel, A. Larisch, and A. Kirchheim, “A large-scale
+datasetforhumanoidroboticsenablinganoveldata-drivenfallpredic-
+[1] S.-k.YunandA.Goswami,“Tripodfall:Conceptandexperimentsof tion,”inIEEEInternationalConferenceonRoboticsandAutomation
+anovelapproachtohumanoidrobotfalldamagereduction,”inIEEE (ICRA),2025.
+InternationalConferenceonRoboticsandAutomation(ICRA),2014.
+[23] J.Chung,C.Gulcehre,K.Cho,andY.Bengio,“Empiricalevaluation
+[2] S. Ha and C. K. Liu, “Multiple contact planning for minimizing of gated recurrent neural networks on sequence modeling,” arXiv
+damageofhumanoidfalls,”inIEEE/RSJInternationalConferenceon preprintarXiv:1412.3555,2014.
+IntelligentRobotsandSystems(IROS),2015.
+[24] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov,
+[3] Z.Xu,Y.Li,K.yeeLin,andS.X.Yu,“Unifiedhumanoidfall-safety “Proximal policy optimization algorithms,” arXiv preprint
+policy from a few demonstrations,” 2025. [Online]. Available: arXiv:1707.06347,2017.
+https://arxiv.org/abs/2511.07407 [25] P. Christiano, Z. Shah, I. Mordatch, J. Schneider, T. Blackwell,
+[4] R. Subburaman, D. Kanoulas, N. Tsagarakis, and J. Lee, “A survey J.Tobin,P.Abbeel,andW.Zaremba,“Transferfromsimulationtoreal
+oncontrolofhumanoidfallover,”RoboticsandAutonomousSystems, worldthroughlearningdeepinversedynamicsmodel,”arXivpreprint
+vol.166,p.104443,2023. arXiv:1610.03518,2016.
+[5] S.WangandK.Hauser,“Unifiedmulti-contactfallmitigationplanning [26] UnitreeRobotics,G1,2024,www.unitree.com/g1.
+for humanoids via contact transition tree optimization,” in 2018 [27] B.Siciliano,O.Khatib,andT.Kro¨ger,Springerhandbookofrobotics.
+IEEE-RAS 18th International Conference on Humanoid Robots (Hu-
+Springer,2008,vol.200.
+manoids),2018.
+[28] L. Ma, Z. Meng, T. Liu, Y. Li, R. Song, W. Zhang, and S. Huang,
+[6] L.Rossini,B.Henze,F.Braghin,andM.A.Roa,“Optimaltrajectory “Styleloco: Generative adversarial distillation for natural humanoid
+for active safe falls in humanoid robots,” in IEEE-RAS International robotlocomotion,”arXivpreprintarXiv:2503.15082,2025.
+ConferenceonHumanoidRobots(Humanoids),2019.
+[7] R.Subburaman,J.Lee,D.G.Caldwell,andN.G.Tsagarakis,“Online
+falling-over control of humanoids exploiting energy shaping and
+distributionmethods,”inIEEEInternationalConferenceonRobotics
+andAutomation(ICRA),2018.

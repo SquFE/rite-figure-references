@@ -1,0 +1,676 @@
+PAGE 1
+Humanoid Dodgeball: Learning Fast Dynamic Obstacle Avoidance
+Motions for Humanoids
+Aoqian Zhang1,*, Chunzheng Wang1,*, Haoran Chen1,*, Annan Tang2,
+Cheng Xiang3, Fan Shi1, and Shuzhi Sam Ge1
+Abstract—Humanoidshavebecomeincreasinglyagileandca-
+pableinreal-worldenvironments.Tooperatesafelyindynamic
+scenarios, they must rapidly evade fast-moving obstacles while
+maintainingstabilityandphysicallyfeasiblewhole-bodymotion.
+Learning such behaviors remains challenging due to the high-
+dimensional dynamics of humanoid systems and the need to
+jointlybalancereactiveobstacleavoidance,motionnaturalness,
+and control robustness. In this work, we present Humanoid
+Dodgeball, a reinforcement learning (RL) framework for agile
+dynamicobstacleavoidanceinhumanoids.Ourmethodenables
+highly dynamic whole-body evasive maneuvers against incom-
+ing projectiles through threat-aware reward shaping, while
+multiple direction-specific adversarial motion priors regularize
+thelearnedbehaviorstowardstableanddiversehuman-likemo-
+tions. Extensive simulation and hardware experiments demon-
+strate that the proposed framework substantially improves
+dynamic obstacle avoidance performance across diverse obsta-
+cle speeds and launch distances, while preserving robust and
+physically plausible humanoid motions. Supplementary videos
+are available at https://humanoid-dodge.github.io/.
+I. INTRODUCTION
+Recent advances in reinforcement learning for humanoids
+Fig.1. OurdynamicobstacleavoidancepolicydeployedontheEngineAI
+have significantly improved humanoid whole-body motion
+PM01 humanoid. (Top) The robot dodges by stepping forward. (Bottom)
+tracking and control through training on large human mo- Therobotdodgesbyjumpingbackward.
+tion datasets [1]–[3]. These developments have enabled hu-
+real-world settings. However, learning such reactive whole-
+manoids to acquire a wide range of dynamic and human-
+body avoidance behaviors for humanoids remains highly
+like skills, including athletic sports behaviors such as soccer
+challenging due to the need for rapid reaction, dynamic
+[4] and tennis [5], highly dynamic parkour locomotion [6],
+balance maintenance, and coordinated whole-body motion
+and complex whole-body tasks such as skateboarding [7].
+generation.
+To further improve the safety and robustness of humanoid
+Toaddressthesechallenges,wepresentHumanoidDodge-
+deployment in complex and human-centered environments,
+ball, a novel humanoid whole-body control framework for
+recent research has explored protective falling strategies that
+dynamic obstacle avoidance. The main contributions of this
+reducedamagetoboththerobotanditssurroundingsduring
+work are as follows:
+unavoidable failures [8], as well as collision-free navigation
+and traversal in cluttered environments with static obstacles • We design a reinforcement learning framework that
+enables humanoids to evade fast-moving projectiles
+[9]. These advances represent important steps toward de-
+through coordinated whole-body evasive maneuvers
+ployinghumanoidsinreal-worldenvironmentswheresafety,
+while maintaining stability.
+robustness, and physical interaction are critical.
+Despite these remarkable advances, humanoids still lack • We combine threat-aware rewards, direction-specific
+motion priors, and capture-point guidance to promote
+the ability to safely and robustly react to fast-moving dy-
+effective avoidance, diverse natural motions, and stable
+namicobjects.Thecapabilitytoevadeincomingobstaclesis
+recovery.
+a fundamental and natural behavior observed in legged ani-
+mals,includinghumans,andisessentialforagileoperationin • We validate our proposed method through simulation
+experiments on two humanoid platforms and hardware
+*Equalcontribution. experiments on the EngineAI PM01 humanoid.
+1DepartmentofElectricalandComputerEngineering,NationalUniversity
+ofSingapore,Singapore. II. RELATEDWORK
+2ShenzhenEngineAIRoboticsTechnologyCo.,Ltd.,China.
+Dynamic obstacle avoidance has been widely studied
+3SchoolofInformationandCommunicationEngineering,DalianUniver-
+sityofTechnology,China. acrossdifferentroboticplatforms.Inaerialrobotics,Falanga
+6202
+tcO
+92
+]OR.sc[
+1v30004.0162:viXra
+
+PAGE 2
+etal.proposedanevent-camera-basedframeworkforquadro- π (a | o ) that maximizes the expected discounted return
+θ t t
+tor obstacle avoidance that leverages the microsecond-level J(θ)=E [ (cid:80)∞ γtr ]. In this work, the policy’s objective
+πθ t=0 t
+response of event cameras to generate low-latency reactive is to avoid dynamic obstacles while maintaining stability
+avoidance behaviors using artificial potential fields [10]. without failure. A failure is defined as any non-foot body
+More recently, Fan et al. introduced an end-to-end rein- part of the humanoid making contact with the ground.
+forcement learning framework that uses multi-frame Li- Observation space. At each control step t, the policy
+DARobservationstodirectlygeneratecontrolcommandsfor receives an observation o = [sp, so], comprising proprio-
+t t t
+avoiding high-speed dynamic obstacles [11]. In quadrupedal ceptive and obstacle states. The proprioceptive state sp =
+t
+robots, He et al. proposed Agile But Safe (ABS), a dual- [ω ,ϕ ,θ ,q ,q˙ ,a ] contains the base angular velocity
+t t t t t t−1
+policyreinforcementlearningframeworkthatcombinesagile ω ∈ R3, the base roll ϕ and pitch θ , the joint positions
+t t t
+locomotion and recovery policies through a learned reach- q ∈ RN and velocities q˙ ∈ RN, and the previous action
+t t
+avoid value network for high-speed collision-free navigation a ∈RN, where N is the number of actuated joints. The
+t−1
+[12]. Wang et al. further proposed Omni-Perception, an obstacle state so =[xo,yo,zo]∈R3 gives the obstacle’s 3D
+t t t t
+end-to-end reinforcement learning framework that directly position in the robot base frame.
+processes raw LiDAR point clouds using a hierarchical per- Action space. The policy outputs an action a ∈ RN
+t
+ceptionnetworkforomnidirectionalobstacleavoidance[13]. specifyingjointpositionoffsetsrelativetoanominalstanding
+To address the slow response of navigation-based avoidance configuration. The desired joint targets are qtarget =αa +
+t t
+strategies, Xu et al. proposed the Reflexive Evasion Robot qdefault,whereαistheactionscalingfactorandqdefault the
+(REBot)framework,whichintroducesabiologicallyinspired default standing configuration. These targets are tracked by
+finite-state-machine architecture for reflexive evasion behav- joint-level proportional–derivative (PD) controllers produc-
+iors [14]. REBot enables rapid obstacle avoidance through ingtorquesτ =K (qtarget−q )−K q˙ ,withstiffnessand
+t p t t d t
+shorter reaction times and faster whole-body quadruped damping gains K and K .
+p d
+maneuvers.
+Dynamic obstacle avoidance is significantly more chal- B. Threat-aware avoidance policy training
+lenging for humanoids than for aerial and quadruped robots We approximate the dynamic obstacle as a sphere with
+due to humanoids’ high-dimensional whole-body dynam- center position po ∈ R3, velocity vo ∈ R3, and radius
+t t
+ics, ground contact limitations, and strict balance con- Ro. The humanoid is represented by K = 10 key bodies
+straints. When faced with fast-moving incoming obsta- B ={1,...,K} (the head, torso, and upper and lower links
+cles, humanoids cannot simply evade threats through low- of both arms and legs). Each body i is represented by a
+dimensional velocity modulation or direct body translation. sphere with center position pi ∈ R3, velocity vi ∈ R3,
+t t
+Instead, they must coordinate each body part and foot radiusRi,andsafetymarginm=0.5m.Thisrepresentation
+placement in a fully integrated manner to perform agile permits efficient per-body threat estimation using sphere–
+evasive maneuvers while maintaining locomotion stability sphere geometry. Let Ri =Ro+Ri+m be the radius of
+safe
+andphysicallyplausiblemotion.Concurrentlywithourwork, the safety region.
+Yangetal.proposedaperception-awarereinforcementlearn- Predictive threat. We first estimate whether the obstacle
+ing framework for humanoid dynamic obstacle avoidance will enter the safety region of each body within a prediction
+thatcombinescontrolbarrierfunction(CBF)-inspiredreward horizon H = 3 s. Under a constant-velocity approximation,
+shaping with adversarial motion priors (AMP)-based motion we compute the time of closest approach and its validity
+regularization [15]. However, it considers a limited set of mask as
+obstacle trajectories, which limits the policy’s ability to
+(∆pi)⊤wi
+generalize to more diverse projectile conditions. Compared τi∗ =− t t, Mi =I(0<τi∗ <H), (1)
+t ∥wi∥2 t t
+withexistingapproaches,ourmethodenablesmoreeffective t
+dynamic obstacle avoidance for humanoids by achieving where ∆pi = po − pi and wi = vo − vi are the
+t t t t t t
+higher avoidance success rates and robust evasive behaviors relative position and velocity from body i to the obstacle,
+against obstacles approaching from diverse directions and respectively. In this formulation, obstacles that are already
+speeds. receding or whose closest approach lies beyond H do not
+activate the predictive threat. The additional displacement
+III. METHODS
+required to keep body i outside the region is
+A. Problem formulation
+We formulate dynamic obstacle avoidance for humanoid δ t i =M t imax(0,R i safe−di t ∗), (2)
+robots as a discrete-time reinforcement learning problem.
+where di∗ = ∥∆pi + τi∗wi∥ is the distance of closest
+We model the task as a Markov decision process (MDP) t t t t
+approach. The required acceleration magnitude and the re-
+M = ⟨S,A,T,R,γ⟩, where S is the state space, A
+MDP sulting predictive threat are computed as
+the action space, T(s | s ,a ) the transition dynamics
+t+1 t t
+induced jointly by the robot dynamics and the obstacle  (cid:32) (cid:33)2 
+2δi areq,i
+m
+[0,
+o
+1
+ti
+)
+on
+th
+,
+e
+R
+dis
+:
+co
+S
+un
+×
+t
+A
+fact
+→
+or.
+R
+The
+the
+ob
+r
+j
+e
+e
+w
+ct
+a
+iv
+rd
+e i
+f
+s
+un
+to
+cti
+l
+o
+ea
+n
+r
+,
+n
+a
+a
+nd
+po
+γ
+lic
+∈
+y
+ar
+t
+eq,i =
+τ t i∗
+t
+2
+, S
+t
+i =1−exp−
+a
+t
+ref
+, (3)
+
+PAGE 3
+Fig.2. OverviewofHumanoidDodgeball.Duringsimulationtraining,predictiveandnear-fieldthreatforkeybodiesarecomputedtocharacterizeincoming
+projectile hazards and guide threat-aware reward shaping for whole-body evasion. Direction-specific adversarial motion priors, selected according to the
+rootescapedirection,regularizethelearnedbehaviorstowarddiverseandnaturalhuman-likedodgemotions.Whenthethreatsubsides,recoveryrewards,
+includingorientationandcapture-pointobjectives,encouragerapidstabilization.Duringhardwaredeployment,thetrainedactorisexecutedusingobstacle
+positionsestimatedfromthemotion-capturesystem.
+where a = 2 m/s2 is a reference acceleration. Con- distance reward is calculated as
+ref
+sequently, Si ∈ [0,1] jointly captures the future collision 
+t −Di, ci ≥0,
+geometry, remaining reaction time, and required evasive (cid:88)  t t
+effort. r t distance = (cid:18) |ci| (cid:19) (7)
+Near-field threat. The predictive threat is complemented i∈B
+ − 1+
+σ
+t , ci
+t
+<0.
+near
+by a bounded near-field threat that depends only on the
+While the body escape and distance rewards encourage
+current surface clearance ci =∥∆pi∥−Ri . We map this
+t t safe dodging behavior, they do not explicitly guide the robot’s
+clearance to a bounded near-field threat using a one-sided
+overall movement. Therefore, we further define a root-body
+Gaussian kernel,
+escape-direction reward,
+(cid:34) (cid:18) max(ci,0) (cid:19)2(cid:35) rroot-dir =I(Sroot >0)ϕ (cid:16) vˆroot·epred,root (cid:17) , (8)
+Di =exp − t , (4) t t t t,xy
+t σ
+near where vˆroot = vroot/∥vroot∥ is the root velocity direction
+t t,xy t,xy
+in the xy plane. The asymmetric direction-scoring function
+where σ = 0.5 m controls the spatial decay. The threat
+near is
+equals one when the obstacle enters the safety region and
+ϕ(x)=max(x,0)−λ max(−x,0), (9)
+smoothly decreases as the obstacle moves away. wrong
+Threat-aware avoidance reward. To encourage the hu- where λ = 5 penalizes root motion in the wrong
+wrong
+manoid to dodge dynamic obstacles, we design rewards direction. Regularization rewards are included to help the
+based on the predictive and near-field threats. We define the robot maintain a stable posture and produce smooth joint-
+body escape reward as level actions. When the overall threat T = max [1 −
+i∈B
+(1−Si)(1−Di)] is zero (in practice, we use T < 10−3
+(cid:34) (cid:32) (cid:33)(cid:35) t t
+rescape = (cid:88) Sitanh max(0,v t i·ep t red,i) , (5) to disregard small nonzero tails in D t i), we apply recovery
+t t 1.5 rewardsthathelptherobotreturntoastablestandingposture.
+i∈B Wefurtherincludeacapture-pointrewardtoencouragestable
+recovery after evasive maneuvers:
+where
+epred,i =− ∆pi t +τ t i∗w t i , (6) rcapture =exp (cid:16) − (cid:13) (cid:13)pcapture−psupp(cid:13) (cid:13) 2 2 /σ c 2 p (cid:17) , (10)
+t ∥∆pi+τi∗wi∥
+t t t where pcapture = proot + vroot/ω is the instantaneous
+xy xy 0
+(cid:112)
+isthedesiredbodyescapedirection,whichpointsawayfrom capture point, ω = g/zroot is the natural frequency of
+0
+the predicted closest-approach point. The reward rescape en- the linear inverted pendulum model, g is the gravitational
+t
+couragesthreatenedbodiestomoveawayfromthepredicted acceleration, and zroot is the robot root height. The support
+obstacle trajectory, with each body’s contribution weighted position psupp = (pL + pR )/2 is approximated by the
+xy xy
+by Si. We also penalize obstacle proximity to the robot’s midpointoftheleftandrightfeet,andσ =0.12mcontrols
+t cp
+bodies using the near-field threat measure, with a larger the sensitivity of the reward to the capture-point tracking
+penalty for obstacles within the safety region. The body error.
+
+PAGE 4
+TABLEI least-squares adversarial objective
+REWARDFUNCTIONSFORPOLICYTRAININGANDTHEIR (cid:104) (cid:105)
+CORRESPONDINGWEIGHTS. m
+D
+i
+k
+n E xt∼dk
+M
+(D k (x t )−1)2
+(11)
+(cid:104) (cid:105)
+Name Expression Weight +E xt∼dk
+π
+(D k (x t )+1)2 ,
+Dodgerewards(T >0)
+Bodyescape rescape(Eq.5) 40.0 where dk M denotes the reference transition distribution for
+Bodydistance rdistance(Eq.7) 50.0 dodge direction k, and dk π denotes the policy transition
+Root-bodyescapedirection rroot−dir(Eq.8) 60.0 distribution assigned to discriminator D k according to the
+Recoveryrewardsintheabsenceofthreats(T =0) selected root escape direction. The policy receives the AMP
+Rootvelocity exp (cid:16) − (cid:13) (cid:13)v x ro y ot(cid:13) (cid:13) 2 2 /0.52 (cid:17) 10.0 rewar (cid:104) d from the selected discrimina (cid:105) tor D k as r t AMP =
+Torsoorientation (cid:0)ϕtorso(cid:1)2+(cid:0)θtorso(cid:1)2 -20.0 max 0, 1−0.25(D k (q t ,q t+1 )−1)2 .
+Jointdeviation (cid:80)N
+i=1
+(cid:0)qi−qi,default (cid:1)2 -40.0
+Capturepoint rcapture(Eq.10) 10.0 D. Training details
+Regularizationrewards Training environment setup. We train the policies in
+AMPreward rAMP 10.0 the mjlab simulator [19] using 4096 parallel environments
+Angularvelocitypenalty (cid:13) (cid:13)ω x ro y ot(cid:13) (cid:13) 2 -0.2 and evaluate our framework on two humanoid platforms,
+Jointvelocities ∥q˙∥2 -0.001 Unitree G1 and EngineAI PM01. To expose the policies
+2
+Jointaccelerations ∥(q˙t−q˙t−1)/dt∥2 -2.5e-7 to diverse dynamic obstacles, an obstacle is initialized at a
+Actionrate ∥(at−at−1)/dt∥2 -0.1 randomly sampled position relative to the robot. Its initial
+Actionacceleration ∥at−2at−1+at−2∥2 2 -0.05 velocity is generated using one of two schemes: 1) the
+Jointpositionlimit (cid:80)N i=1 max(cid:0)|qi|−0.9·qi,lim,0(cid:1) -10.0 obstacle is directed toward a randomly selected body part
+Jointvelocitylimit (cid:80)N i=1 max(cid:0)|q˙i|−0.9·q˙i,lim,0(cid:1) -5.0 with a randomly sampled speed; or 2) the obstacle is aimed
+Jointtorquelimit (cid:80)N i=1 max(cid:0)|τi|−0.85·τi,lim,0(cid:1) -5.0 toward the robot root in the horizontal plane while an
+Footslip cL (cid:13) (cid:13)v x L y (cid:13) (cid:13) 2 2 +cR (cid:13) (cid:13)v x R y (cid:13) (cid:13) 2 2 -10.0 additional vertical velocity component is applied, producing
+Footclearance (cid:80) i∈{L,R} (1−ci)clip(hi,0,0.25) 20.0 a parabolic projectile trajectory. We further randomize the
+cL and cR denote the left and right foot contact states, respectively, and obstacle radius and the gravitational acceleration acting on
+vLandvRdenotethefootvelocities.hidenotestheheightoffootiabove
+the obstacle to increase the diversity of projectile dynamics.
+theground.
+The detailed domain randomization settings are summarized
+The detailed reward terms and corresponding weights are in Table II.
+shown in Table I. Policy network. The policy actor and critic are param-
+eterized by multilayer perceptrons (MLPs) with hidden-
+C. Adversarial motion priors
+layersizes[512,256,128].Bothnetworksreceivethecurrent
+Weuseadversarialmotionpriors(AMP)[16]toregularize observation o together with a 20-step observation history.
+t
+the learned dodging behaviors toward dynamically feasible The history is processed by a temporal encoder consisting
+and natural human-like motions. We use 90 human evasive of a per-frame linear embedding, followed by a two-layer
+motion clips from the dataset in [17], spanning four dodge 1-D temporal convolutional network and a final linear pro-
+directions:left,right,backward,andforward.Foreachdirec- jectionthatproducesa128-dimensionallatentrepresentation.
+tion, multiple motion styles are included to capture diverse Notably, the obstacle velocity is not provided to the actor;
+realizationsoftheevasivebehavior,suchasdodgingwithan instead, projectile motion is inferred implicitly from the his-
+uprighttorsoorcombiningthedodgewithdownwardmotion tory of obstacle positions. In addition, the critic receives the
+of the head and torso. All motion clips are retargeted to the privileged observation o′ = [D ,S ,c ,c ,v ,vo,pb,ro],
+t t t L R t t t
+robot’s morphology using the method in [18]. where D and S denote the near-field and predictive threat
+t t
+Discriminator training. We employ four direction- values,respectively,forallkeybodies;c andc indicatethe
+L R
+specific AMP discriminators, each associated with one car- leftandrightfootcontactstates;v istherobotrootvelocity;
+t
+dinal dodge direction: left, right, forward, or backward. vo is the obstacle velocity; pb contains the positions of the
+t t
+Each discriminator is trained using joint-state transitions robot’s key bodies expressed in the robot base frame; and
+from the reference motion dataset corresponding to its as- ro denotes the obstacle radius. We use the proximal policy
+sociated dodge direction and transitions generated by the optimization (PPO) algorithm for policy optimization [20].
+policy. At each timestep, the discriminator is selected ac- The policy is trained for 30,000 iterations.
+cording to the desired root escape direction epred,root. If
+t,xy
+epred,root = 0, one of the four discriminators is selected IV. SIMULATIONEXPERIMENTS
+t,xy
+uniformly at random. Otherwise, epred,root is mapped to In this section, we present simulation results, analyze our
+t,xy
+the nearest cardinal direction, and the corresponding dis- method, and compare it with baseline methods. Specifically,
+criminator is activated. For discriminator D , where k ∈ we answer the following questions: Q1 Does our method
+k
+{left,right,forward,backward}, let x =(q ,q ) denote achieve better avoidance performance than the baselines
+t t t+1
+ajoint-statetransition.Thediscriminatoristrainedusingthe across a wide range of dynamic obstacle states? Q2 Does
+
+PAGE 5
+TABLEII
+DOMAINRANDOMIZATIONPARAMETERS.ALLQUANTITIESARE
+SAMPLEDUNIFORMLYWITHINTHESPECIFIEDRANGES.
+Category Term Range
+Frictioncoefficient [0.1,2.0]
+Dynamics JointKp,K d scaling [0.8,1.2]×
+Jointpositionbias [−0.05,0.05]rad
+TorsoCOMoffset [−0.05,0.05]m
+Baseangularvelocityω [−0.2,0.2]rad/s
+Baseroll/pitch(ϕ,θ) [−0.25,0.25]rad
+Jointpositionsq [−0.02,0.02]rad
+Sensornoise
+Jointvelocitiesq˙ [−1.5,1.5]rad/s
+Previousactionat−1 [−0.2,0.2]
+Obstaclepositionso [−0.2,0.2]m
+Linearvelocitypushvx p y ush [−1.0,1.0]m/s
+Disturbances Roll/pitchvelocitypushωpush [−0.6,0.6]rad/s
+ϕθ
+Yawvelocitypushωpush [−0.8,0.8]rad/s
+ψ
+Horizontalposition(xo,yo) [−6,6]m
+Heightzo [0,1.8]m
+Obstacle Launchspeed∥vo ∥ [2,16]m/s
+xy
+initialstate Launchspeed∥vo∥ [1,6]m/s
+z Fig. 3. Top: Polar heatmaps of obstacle avoidance success rates across
+ObstacleradiusRo [0.05,0.125]m
+different launch distances and approach directions relative to the robot’s
+Gravityscale [0.0,1.0]g
+heading. Bottom: Success-rate heatmaps across different obstacle launch
+speeds and distances. The red contour indicates the 60% success-rate
+ourpolicyexhibitmorediverseavoidancemotions,anddoes boundary.
+this diversity lead to better obstacle avoidance performance?
+oracle perception option in which the ground-truth obstacle
+Q3 How do our reward design and the use of multiple AMP
+states are observable to the actor.
+discriminators affect performance?
+Forafaircomparison,bothbaselinesaretrainedusingthe
+A. Metrics and baselines same obstacle initialization settings as our method.
+We consider the following performance metrics:
+B. Evaluation of avoidance performance
+1) Success rate (%): SR = Nsuccess × 100%, where
+Nobstacle To evaluate avoidance performance across a broad range
+N isthenumberoftimestherobotdodgestheobstacle
+success
+ofobstaclestates,wesystematicallyvarytheobstaclelaunch
+and maintains stability without falling, and N is the
+obstacle speedvo ∈[4,5,...,15]m/s,theapproachdirectionrelative
+total number of dynamic obstacle occurrences.
+to the robot heading θo ∈ [0,π,...,15π] rad, and the
+2) Recovery time (s): T = t −t , where 8 8
+recovery stable onset horizontal launch distance do ∈ [1.0,1.5,...,6.5] m. This
+t denotes the timestep at which the robot initiates an
+onset results in 12 × 16 × 12 = 2304 distinct obstacle config-
+evasive maneuver, identified when the root velocity satisfies
+urations. Each configuration is evaluated over 100 trials.
+∥vroot∥ > 0.15 m/s. The timestep t is defined as the
+stable In every trial, the targeted body part is sampled uniformly
+beginning of the first continuous 1-s interval after the threat
+from the robot’s key bodies, while the obstacle gravity
+becomes zero during which ∥vroot∥<0.15 m/s, |θtorso|<
+scale is independently randomized within [0,1]g, covering
+0.2 rad, and |ϕtorso|<0.2 rad are all satisfied.
+trajectories from straight-line motion to fully ballistic flight.
+3) Average power (W): The average motor power con-
+We compute the success rate (SR) for each obstacle
+sumed by all actuated joints during a successful evasive
+configuration. Fig. 3 (top) reports SR averaged over launch
+maneuver is computed as
+speeds vo for each launch distance-direction pair (do,θo).
+1 (cid:90) tstable(cid:88) PAC-MAN exhibits pronounced directional sensitivity, with
+P = |τ (t)q˙ (t)| dt.
+motor t −t i i noticeable performance degradation for several frontal, rear,
+stable onset tonset i andlateralapproachdirections.Incontrast,ourmethodmain-
+We compare our approach against two whole-body dy- tainsaconsistentlyhighersuccessrateovernearlytheentire
+namic obstacle avoidance baselines: angular range, indicating stronger robustness to obstacle
+1) REBot [14]: A reinforcement learning framework for approachdirectionandmoreuniformwhole-bodyevasiveca-
+reflexive dynamic obstacle avoidance in quadruped robots pability. Fig. 3 (bottom) reports SR averaged over approach
+using curriculum learning and policy switching. We reim- directions θo for each launch speed-distance pair (vo,do).
+plement its training pipeline for humanoid robots. As expected, both methods become less successful as the
+2) PAC-MAN [15]: Developed concurrently with our obstacle speed increases or the launch distance decreases,
+work, it presents a perception-aware reinforcement learning reducing the available reaction time. However, our method
+framework for humanoid dynamic obstacle avoidance that consistently achieves higher success rates across the speed-
+combines CBF-inspired reward shaping with AMP-based distance space. The red contour denotes the 60% success-
+motionregularization.Forafaircomparison,weretrainPAC- rateboundary.ComparedwithPAC-MAN,ourmethodshifts
+MAN using our human motion dataset and use the state- thisboundarytowardsubstantiallymorechallengingobstacle
+
+PAGE 6
+TABLEIII
+DODGEPERFORMANCEUNDERDIFFERENTTIME-TO-HIT(TTH)RANGESINSIMULATION.RECOVERYTIMEANDAVERAGEMOTORPOWERARE
+REPORTEDASMEAN±STANDARDDEVIATION.BOLDINDICATESTHEBESTRESULTFOREACHROBOTANDTTHRANGE.
+UnitreeG1 EngineAIPM01
+TTH(s) Method SR(%) Trecovery (s) Pmotor (W) SR(%) Trecovery (s) Pmotor (W)
+Ours 11.8 1.194±0.356 569.6±124.5 14.2 1.197±0.439 586.3±145.9
+<0.4 REBot[14] 4.8 1.772±0.468 645.3±93.5 8.1 2.293±0.972 830.9±266.6
+PAC-MAN[15] 5.9 0.825±0.467 316.7±77.2 3.9 1.788±1.382 335.9±139.7
+Ours 64.6 1.438±0.900 587.7±105.7 55.5 1.369±0.666 590.0±129.3
+0.4–0.8 REBot[14] 10.0 1.735±0.443 618.7±86.1 9.8 2.162±0.575 834.1±228.0
+PAC-MAN[15] 36.8 0.570±0.337 319.8±61.0 33.6 1.097±0.939 396.8±104.8
+Ours 95.1 1.119±0.300 507.9±95.8 94.2 1.298±0.343 580.3±117.2
+0.8–1.2 REBot[14] 34.0 1.826±0.396 553.0±67.6 17.3 2.416±0.813 777.3±182.9
+PAC-MAN[15] 79.2 0.244±0.210 312.8±58.5 79.5 0.589±0.319 395.3±76.8
+Ours 95.6 1.190±0.363 399.3±71.2 97.2 1.303±0.341 486.0±104.8
+≥1.2 REBot[14] 53.1 2.008±0.565 522.4±102.7 43.9 2.190±0.825 752.8±174.4
+PAC-MAN[15] 81.9 0.262±0.192 305.2±58.7 86.6 0.237±0.150 386.0±73.7
+configurations, demonstrating improved tolerance to faster
+projectiles and shorter reaction distances.
+We group the obstacle launch states into four nominal
+time-to-hit (TTH) categories, where TTH = do/vo, and
+summarize the results in Table III. Our method consistently
+achieves the highest success rate (SR) across all TTH
+ranges and on both humanoid platforms. The advantage
+becomes particularly pronounced as more reaction time
+becomes available. This indicates that the learned policy
+effectively exploits additional reaction time and generalizes
+consistentlyacrosstwohumanoidplatforms.REBotperforms
+substantially worse, reaching only around 50% for TTH ≥
+1.2s,whileitssuccessratedropsrapidlyasTTHdecreases. Fig.4. VisualizationofobstaclecollisionfrequencyontheG1andPM01
+humanoidsduringthesimulationevaluation.
+REBot also generally exhibits longer recovery times and
+considerably higher motor power consumption, particularly
+C. Analysis of avoidance motions
+on PM01, suggesting that its reflexive evasion training
+pipeline,originally developedfor quadrupedswithout AMP-
+based motion regularization, transfers poorly to humanoid To characterize the diversity of learned evasive behav-
+whole-body avoidance. PAC-MAN performs significantly iors, we collect motion windows generated during evalua-
+better than REBot and has the lowest average mechanical tion across a wide range of obstacle configurations. Each
+power and generally the shortest recovery time. However, window contains the 20 most recent frames, where each
+its avoidance success remains below ours in every TTH frame is represented by f = [q ,vroot,h,ωroot,zroot].
+t t t t t
+range. Overall, our method provides the strongest obstacle Each motion window is labeled according to the robot’s
+avoidance performance at the cost of higher motor power movement direction during the window. Fig. 5 shows the
+consumption and slower post-evasion recovery than PAC- t-SNE embeddings of 10000 motion windows randomly
+MAN. sampled during evaluation for our method, our method with
+Fig.4visualizesthecollisionfrequencyofindividualbody a single AMP discriminator, and PAC-MAN. Our method
+parts for the G1 and PM01 humanoids during evaluation. exhibits the broadest and most balanced distribution across
+ForPAC-MAN,collisionsareconcentratedprimarilyaround forward,backward,leftward,andrightwardevasivemotions,
+the head, torso, and lower limbs, while the pelvis and upper indicating greater behavioral diversity. In contrast, PAC-
+legsexperiencecomparativelyfewercontacts.Incontrast,our MAN is strongly dominated by backward dodging, with
+methodsubstantiallyreducescollisionfrequencyacrossmost comparatively few forward and lateral motions. Using only
+upper-body regions, with the remaining contacts occurring a single AMP discriminator also leads to clear mode imbal-
+mainly around the lower legs and feet. This concentration is ance,particularlywithverylimitedforward-dodgebehaviors.
+likely due to the functional constraints of the lower limbs Introducing direction-specific AMP discriminators produces
+during dynamic evasion: the feet must prioritize support and more distinct and better represented motion modes across
+balance maintenance, leaving less freedom for aggressive all four dodge directions, demonstrating their effectiveness
+collision-avoidance motions than the upper body. in promoting diverse evasive behaviors.
+
+PAGE 7
+Fig. 5. t-SNE visualization of avoidance motions from the evaluation
+rollouts. Fig. 6. Ablation studies under different time-to-hit (TTH) conditions.
+(a) Success rate after removing individual reward terms or replacing the
+D. Ablation studies direction-specific AMP discriminators with a single discriminator. (b) Fall
+rateafterremovingthecapture-pointrecoveryrewardorusingasingleAMP
+discriminator.
+To assess the contributions of individual reward terms
+and direction-specific motion priors, we compare the full V. HARDWAREDEPLOYMENT
+framework with the following five ablated variants: 1) w/o
+We deploy the trained policy on the EngineAI PM01
+body escape reward rescape, 2) w/o body distance re-
+humanoid to evaluate its performance under real-world con-
+ward rdistance, 3) w/o root-direction reward rroot−dir, 4)
+ditions. A motion capture system tracks the robot and the
+w/o capture-point reward rcapture, and 5) single AMP
+incoming obstacle. The obstacle position is transformed into
+discriminator, which replaces the four direction-specific
+the robot’s coordinate frame and provided to the policy. We
+discriminators with one shared discriminator to evaluate the
+evaluate obstacle avoidance by throwing a ball with a radius
+benefit of direction-specific motion regularization.
+of 0.12 m toward the robot from different directions and
+Fig. 6(a) evaluates the contribution of the individual
+at different speeds. The ball speed recorded by the motion
+reward terms and the multi-discriminator AMP design to
+capture system ranges from 3.0 m/s to 10 m/s.
+obstacle avoidance performance. Removing rdistance consis-
+AsshowninFig.7,therobotrespondswithdiversewhole-
+tently reduces the success rate, with the largest degradation
+body evasive maneuvers, including forward and lateral steps
+observed for short reaction times, indicating that the near-
+combined with ducking. Out of the 30 trials, the robot
+field distance penalty is important for maintaining sufficient
+successfully dodges 22 times, achieving an overall success
+clearance from rapidly approaching obstacles. Removing
+rate of approximately 73%. Out of the 8 failure cases, the
+rescape also leads to a substantial performance drop for
+robot gets hit by the ball 6 times and falls to the ground
+TTH < 1.4 s, particularly in the more challenging short-
+while dodging twice. Most hit failures occur when fast
+TTH regime, demonstrating that the escape-velocity reward
+projectiles(typically>8m/s)aredirectedtowardthetorso;
+is critical for eliciting timely evasive motions. A similar
+althoughthethreatsuccessfullytriggersanevasiveresponse,
+trend is observed when removing rroot−dir: the success rate
+theremainingreactiontimeissometimesinsufficienttoavoid
+decreasesnoticeablyforTTH<1.0s,showingthattheroot-
+contact.Anotherfailuremodeoccurswhenafast-rollingball
+direction reward helps resolve conflicting local body-part
+approaches the feet: although the robot steps laterally to
+escape directions and promotes coherent whole-body dis-
+evade it, the swinging foot inadvertently contacts the ball.
+placement under imminent threats. Replacing the direction-
+These results demonstrate that the learned policy transfers
+specific AMP discriminators with a single discriminator
+to hardware and generates coordinated evasive behaviors in
+causes a consistent reduction in success rate, suggesting that
+responsetoincomingprojectiles,withamodestperformance
+direction-specific motion priors improve the effectiveness of
+gap consistent with expected sim-to-real differences.
+the learned evasive behaviors. This result further suggests
+that promoting a more diverse repertoire of avoidance mo-
+VI. CONCLUSIONANDFUTUREWORK
+tions contributes to better obstacle avoidance performance,
+consistent with the findings of [14], which show that greater We presented Humanoid Dodgeball, a reinforcement
+gait diversity improves dynamic obstacle avoidance. learning framework for reactive whole-body avoidance of
+Fig. 6(b) further examines the effect of stabilization and fast-moving projectiles. By combining threat-aware reward
+motion-prior design on fall rate. Removing rcapture substan- shaping, direction-specific adversarial motion priors, and
+tially increases the probability of falling across all TTH capture-point guidance, the framework learns diverse eva-
+ranges, confirming that the capture-point reward is impor- sive maneuvers while promoting balance and post-evasion
+tant for recovering balance after highly dynamic evasive recovery. Simulation experiments on Unitree G1 and En-
+maneuvers. Using a single AMP discriminator leads to an gineAI PM01 demonstrate higher avoidance success rates
+even higher fall rate, indicating that direction-specific AMP than the evaluated baselines across all tested time-to-hit
+regularization not only improves avoidance performance but ranges. Ablation studies further support the contributions
+also contributes to more dynamically feasible and stable of the reward design and direction-specific motion priors to
+motions.Incontrast,thefullsystemmaintainsaconsistently avoidance performance and stability. Hardware experiments
+low fall rate across all TTH ranges. on PM01 demonstrate coordinated avoidance behaviors.
+
+PAGE 8
+Fig. 7. Hardware demonstrations on the EngineAI PM01 humanoid under diverse projectile conditions. (a) A ball aimed toward the robot’s center is
+avoidedbysteppingforward.(b)Aprojectiledirectedtowardtheheadisavoidedthroughacoordinatedforwardstepandduckingmotion.(c)Aballaimed
+attherightshoulderisavoidedbysteppinglaterallytotheleft.(d)Aprojectiletargetingtheheadisavoidedthrougharightwardstepcombinedwitha
+ducking maneuver. These examples demonstrate that the learned policy produces diverse whole-body evasive strategies in response to different obstacle
+trajectoriesandincomingdirections.
+Despitetheseresults,avoidanceremainschallengingunder [6] Z. Wu, X. Huang, L. Yang, Y. Zhang, K. Sreenath, X. Chen,
+short reaction times, and improved success comes at the P. Abbeel et al., “Perceptive humanoid parkour: Chaining dynamic
+human skills via motion matching,” in Proceedings of Robotics:
+cost of higher motor power and longer recovery times than
+ScienceandSystems(RSS),2026,originallyreleasedasarXivpreprint
+PAC-MAN. Future work will explore policies that better arXiv:2602.15827.
+balance dodge success rate and power consumption, replace [7] J.Han,D.Wang,C.Zhangetal.,“Husky:Humanoidskateboarding
+system via physics-aware whole-body control,” in Proceedings of
+motioncapturewithonboardperception,andreducethesim-
+Robotics: Science and Systems (RSS), 2026, originally released as
+to-real gap through improved actuator modeling. We also arXivpreprintarXiv:2602.03205.
+plan to extend the framework to handle multiple obstacles [8] Z. Meng, T. Liu, L. Ma, Y. Wu, R. Song, W. Zhang, and S. Huang,
+“Safefall: Learning protective control for humanoid robots,” arXiv
+and integrate avoidance with locomotion and manipulation
+preprintarXiv:2511.18509,2025.
+policies. [9] H.Xue,S.Liang,Z.Zhang,Z.Zeng,Y.Liu,Y.Lian,J.Wang,Q.Liu,
+X. Shi, and L. Yi, “Collision-free humanoid traversal in cluttered
+indoorscenes,”arXivpreprintarXiv:2601.16035,2026.
+REFERENCES
+[10] D.Falanga,K.Kleber,andD.Scaramuzza,“Dynamicobstacleavoid-
+ance for quadrotors with event cameras,” Science Robotics, vol. 5,
+[1] T.He,J.Gao,W.Xiao,Y.Zhang,Z.Wang,J.Wang,Z.Luo,G.He, no.40,p.eaaz9712,2020.
+N. Sobanbabu, C. Pan, Z. Yi, G. Qu, K. Kitani, J. K. Hodgins, [11] X. Fan, M. Lu, B. Xu, and P. Lu, “Flying in highly dynamic
+L.Fan,Y.Zhu,C.Liu,andG.Shi,“ASAP:Aligningsimulationand environmentswithend-to-endlearningapproach,”IEEERoboticsand
+real-world physics for learning agile humanoid whole-body skills,” AutomationLetters,2025.
+in Proceedings of Robotics: Science and Systems, Los Angeles, CA, [12] T.He,C.Zhang,W.Xiao,G.He,C.Liu,andG.Shi,“Agilebutsafe:
+USA,Jun.2025. Learningcollision-freehigh-speedleggedlocomotion,”inProceedings
+[2] Z. Luo, Y. Yuan, T. Wang et al., “Sonic: Supersizing motion ofRobotics:ScienceandSystems(RSS),2024,originallyreleasedas
+tracking for natural humanoid whole-body control,” arXiv preprint arXivpreprintarXiv:2401.17583.
+arXiv:2511.07820,2025. [13] Z.Wang,T.Ma,Y.Jia,X.Yang,J.Zhou,W.Ouyang,Q.Zhang,and
+[3] Y.Ze,S.Zhao,W.Wangetal.,“Twist2:Scalable,portable,andholistic J. Liang, “Omni-perception: Omnidirectional collision avoidance for
+humanoid data collection system,” in Proceedings of the 2026 IEEE legged locomotion in dynamic environments,” in Proceedings of the
+InternationalConferenceonRoboticsandAutomation(ICRA). IEEE, Conference on Robot Learning (CoRL), 2025, originally released as
+2026,originallyreleasedasarXivpreprintarXiv:2511.02832. arXivpreprintarXiv:2505.19214.
+[4] Y.Wang,C.Luo,P.Chen,J.Liu,W.Sun,T.Guo,K.Yang,B.Hu, [14] Z.Xu,C.Hao,C.Wang,K.Sima,F.Shi,andJ.S.Dong,“Rebot:Re-
+Y.Zhang,andM.Zhao,“Learningvision-drivenreactivesoccerskills flexive evasion robot for instantaneous dynamic obstacle avoidance,”
+forhumanoidrobots,”ScienceRobotics,vol.11,no.117,p.eaed1152, IEEERoboticsandAutomationLetters,vol.11,no.2,pp.1746–1753,
+2026. 2025.
+[5] T.Huang,R.Liu,X.Tang,X.Zhang,J.Ren,H.Wang,F.Jia,Y.Qi, [15] L. Yang, J. Li, and A. D. Ames, “Pac-man: Perception-aware cbf-
+K. Yin, W. Zeng, L. Chen, X. Li, T. Wu, K. Li, R. Dai, J. Wang, rl for whole-body safety in humanoid dodgeball,” arXiv preprint
+L.Han,andJ.Pang,“Towardsprofessionaltennisstylesforhumanoid arXiv:2607.28623,2026.
+robotswithadaptivemotionplanningandtracking,”inProceedingsof [16] X. B. Peng, Z. Ma, P. Abbeel, S. Levine, and A. Kanazawa, “Amp:
+theConferenceonRobotLearning(CoRL),2026. Adversarial motion priors for stylized physics-based character con-
+
+PAGE 9
+trol,”ACMTransactionsonGraphics(TOG),vol.40,no.4,pp.1–20,
+2021.
+[17] Bones Studio, “BONES-SEED: Skeletal everyday embodiment
+dataset,” https://huggingface.co/datasets/bones-studio/seed, 2026, hu-
+manmotioncapturedataset.
+[18] J. P. Araujo, Y. Ze, P. Xu, J. Wu, and C. K. Liu, “Retargeting
+matters: General motion retargeting for humanoid motion tracking,”
+arXivpreprintarXiv:2510.02252,2025.
+[19] K. Zakka, Q. Liao, B. Yi, L. Le Lay, K. Sreenath, and
+P. Abbeel, “mjlab: A lightweight framework for GPU-accelerated
+robot learning,” arXiv preprint arXiv:2601.22074, 2026. [Online].
+Available:https://arxiv.org/abs/2601.22074
+[20] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov,
+“Proximal policy optimization algorithms,” arXiv preprint
+arXiv:1707.06347,2017.

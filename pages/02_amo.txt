@@ -1,0 +1,37 @@
+5202
+yaM
+6
+]OR.sc[
+1v83730.5052:viXra
+AMO: Adaptive Motion Optimization for
+Hyper-Dexterous Humanoid Whole-Body Control
+Jialong Li* Xuxin Cheng* Tianshu Huang* Shiqi Yang Ri-Zhao Qiu Xiaolong Wang
+UC San Diego
+https://amo-humanoid.github.io/
+(a) (b)
+94cm
+60cm
+56cm
+12cm
+(c) 123cm (d)
+(e) (f) (g)
+Fig. 1: AMO enables hyper-dexterous whole-body movements for humanoid robots. (a): The robot picks and places a can on
+platforms of different heights. (b): The robot picks a bottle from the higher shelf on the left and puts it on the lower table on
+the right. (c): The robot stretches its legs to put the bottle on a high shelf. (d-g): The robot demonstrates a wide range of torso
+pitch, roll, yaw, and height adjustments. (e): The robot utilizes hip motors to compensate waist joint limits to achieve larger
+roll rotation.
+Abstract—Humanoid robots derive much of their dexterity adaptation to potentially O.O.D. commands. We validate AMO
+fromhyper-dexterouswhole-bodymovements,enablingtasksthat in simulation and on a 29-DoF Unitree G1 humanoid robot,
+require a large operational workspace—such as picking objects demonstrating superior stability and an expanded workspace
+off the ground. However, achieving these capabilities on real compared to strong baselines. Finally, we show that AMO’s
+humanoids remains challenging due to their high degrees of consistent performance supports autonomous task execution via
+freedom (DoF) and nonlinear dynamics. We propose Adaptive imitation learning, underscoring the system’s versatility and
+MotionOptimization(AMO),aframeworkthatintegratessim-to- robustness.
+realreinforcementlearning(RL)withtrajectoryoptimizationfor
+real-time, adaptive whole-body control. To mitigate distribution
+I. INTRODUCTION
+bias in motion imitation RL, we construct a hybrid AMO Humanscanexpandtheirworkspaceofhandsusingwhole-
+dataset and train a network capable of robust, on-demand bodymovements.Thejointconfigurationsofhumanoidrobots
+closely mimic humans’ functionality and degree of freedom
+* Equal contributions. Special thanks to Jiajian Fu for designing and
+manufacturingoftheActiveHead2.0. while facing challenges of achieving similar movements with
